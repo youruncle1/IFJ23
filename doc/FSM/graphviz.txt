@@ -8,8 +8,6 @@ digraph G {
     S31 //DOUBLEEXP
     S33 //DOUBLEEXPSIGN
     S37 //STRING_S
-    S39 //STRING_ESCAPE
-    S40 //MLSTRING_S
   }
   
   {
@@ -40,10 +38,11 @@ digraph G {
     S30  // DOUBLE          double              0...9 . 0...9
     S32  // EXP             exponent            0...9 (.) e/E 0...9  
     S34  // EXPSIGN         exponent w/ +/-     0...9 (.) e/E +/- 0...9
-    S35  // ???IDENTIFIER
-    S36  // QUESTIONMARK    questionmark        ?
-    S38  // STRING_E        string lit start
-    S41  // MLSTRING_E     multiline str start """
+    S35  // IDENTIFIER_OMIT
+    S36  // IDENTIFIER      
+    S37  // IDENTIFIER_OPT 
+    S39
+    S42  // MLSTRING_E     multiline str start """
   }
 
   start -> S1[label="/"]
@@ -95,20 +94,21 @@ digraph G {
   S33 -> S34[label="0...9"]
   S34 -> S34[label="0...9"]
   
-  start -> S35[label="_/a-z/A-Z"]
-  S35 -> S35[label="_/a-z/A-Z/0..9"]
-  S35 -> S36[label=" ?"]
+  start -> S35[label="_"]
   
-  start -> S37[label="''"]
-  S37 -> S37[label="char"]
-  S37 -> S38[label="''"]
-  S37 -> S39[label="\\"]
-  S39 -> S37[label="char"]
+  S35 -> S36[label="_/a-z/A-Z/0..9"]
+  S36 -> S37[label=" ?"]
+  
+  start -> S38[label="''"]
+  S38 -> S38[label="char"]
+  S38 -> S39[label="''"]
+  S38 -> S40[label="\\"]
+  S40 -> S38[label="char"]
   
   
-  start -> S40[label="'' '' ''"]
-  S40 -> S40[label="char"]
-  S40 -> S41[label="'' '' ''"]
+  start -> S41[label="'' '' ''"]
+  S41 -> S41[label="char"]
+  S41 -> S42[label="'' '' ''"]
 
   start [shape=Mdiamond];
   
