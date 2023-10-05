@@ -1,0 +1,115 @@
+digraph G {
+  {
+  node [shape=circle]
+    S2  //OLCOMMENT
+    S4  //MLCOMMENT
+    S5  //MLCOMMENT_E1
+    S29 //DOUBLEDOT
+    S31 //DOUBLEEXP
+    S33 //DOUBLEEXPSIGN
+    S37 //STRING_S
+    S39 //STRING_ESCAPE
+    S40 //MLSTRING_S
+  }
+  
+  {
+  node [shape=doublecircle]
+    S1   // DIV             divide              /  
+    S3   // OLCOMMENT_E     comment             // 
+    S6   // MLCOMMENT_E2    multi-line comment  /* */
+    S7   // LPAR            left parenthesis    (
+    S8   // RPAR            right parenthesis   )
+    S9   // LBRACE          left curl bracket   {
+    S10  // RBRACE          right curl bracket  }
+    S11  // COMMA           comma               ,
+    S12  // COLON           colon               :
+    S13  // SEMICOLON       semicolon           ;
+    S14  // PLUS            plus sign           +
+    S15  // MUL             multiply            *  
+    S16  // MINUS           minus sign          - 
+    S17  // ARROW           arrow               ->   
+    S18  // LT              less than           <
+    S19  // LE              less equal than     <=
+    S20  // GT              greater than        >
+    S21  // GE              greater equal than  >=
+    S22  // ASSIGN          assignment          =       
+    S23  // EQ              equal               ==
+    S24  // UNWRAP          force unwrap        !
+    S25  // NEQ             not equal           !=
+    S28  // INT             integer             0...9
+    S30  // DOUBLE          double              0...9 . 0...9
+    S32  // EXP             exponent            0...9 (.) e/E 0...9  
+    S34  // EXPSIGN         exponent w/ +/-     0...9 (.) e/E +/- 0...9
+    S35  // ???IDENTIFIER
+    S36  // QUESTIONMARK    questionmark        ?
+    S38  // STRING_E        string lit start
+    S41  // MLSTRING_E     multiline str start """
+  }
+
+  start -> S1[label="/"]
+  S1 -> S2[label="  /"]
+  S2 -> S2[label="char"]
+  S2 -> S3[label="  EOL"]
+  S1 -> S4[label="  *"]
+  S4 -> S4[label="  char"]
+  S4 -> S5[label=" *"]
+  S5 -> S6[label="  / && nested_mlc == 0"]
+  S5 -> S4[label="  char"]
+  
+  start -> S7[label="("]
+  start -> S8[label=")"]
+  start -> S9[label="{"]
+  start -> S10[label="}"]
+  start -> S11[label=","]
+  start -> S12[label="  :"]
+  start -> S13[label=" ;"]
+  start -> S14[label="  +"]
+  start -> S15[label="  *"]
+  
+  start -> S16[label="  -"]
+  S16   -> S17[label="  >"]
+  
+  start -> S18[label="<"]
+  S18 -> S19[label="="]
+  
+  start -> S20[label=">"]
+  S20 -> S21[label="="]
+  
+  start -> S22[label="="]
+  S22 -> S23[label="="]
+  
+  start -> S24[label="!"]
+  S24 -> S25[label="="]
+  
+  start -> S28[label="0...9"]
+  S28 -> S28[label="0...9"]
+  S28 -> S29[label=" ."]
+  S29 -> S30[label="0...9"] 
+  S28 -> S31[label="e/E"]
+  S30 -> S30[label="0...9"]
+  S30 -> S31[label="e/E"]
+  S31 -> S32[label="0...9"]
+  S31 -> S33[label="+-"]
+  S32 -> S32[label="0...9"]
+  S33 -> S33[label="0...9"]
+  S33 -> S34[label="0...9"]
+  S34 -> S34[label="0...9"]
+  
+  start -> S35[label="_/a-z/A-Z"]
+  S35 -> S35[label="_/a-z/A-Z/0..9"]
+  S35 -> S36[label=" ?"]
+  
+  start -> S37[label="''"]
+  S37 -> S37[label="char"]
+  S37 -> S38[label="''"]
+  S37 -> S39[label="\\"]
+  S39 -> S37[label="char"]
+  
+  
+  start -> S40[label="'' '' ''"]
+  S40 -> S40[label="char"]
+  S40 -> S41[label="'' '' ''"]
+
+  start [shape=Mdiamond];
+  
+}
