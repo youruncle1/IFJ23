@@ -25,8 +25,8 @@ typedef enum {
     /* Comment states */
     OLCOMMENT,        // //
     OLCOMMENT_E,      // end of one-line comment (EOF)
-    MLCOMMENT,        // /*
-    MLCOMMENT_E1,     // NFS: multi-line comment end 1 (got *)
+    BLCOMMENT,        // /*
+    BLCOMMENT_E1,     // NFS: multi-line comment end 1 (got *)
     MLCOMMENT_E2,     // FS: end of multi-line comment (got */)
 
     /* Arithmetic and other operator states */
@@ -53,29 +53,28 @@ typedef enum {
     SEMICOLON,        // ;
 
     /* Literal states */
-    INT,
+    DIGIT,
     DOUBLE,
     DOUBLEDOT,        // NFS: got 0.??
     DOUBLEEXP,        // NFS: got 0.1e/E?? or 2e/E??        !! exponent can be only integer
     DOUBLEEXPSIGN,    // NFS: got 0.1e/E+/-?? or 2e/E+/-??
     EXP,              // FS: 0.1E2 or 2E4
-    EXPSIGN,          // FS: 0.1E-2 or 2E+4    
+    EXPSIGN,          // FS: 0.1E-2 or 2E+4
+    IDENTIFIER_OMIT,  // single '_'    
     IDENTIFIER,
-    IDENTIFIER_OPT,    // double?, string?, int?       
+    IDENTIFIER_OPT,   // double?, string?, int?       
 
     /* String states TODO Int?*/
     STRING_S,         // "
     STRING_E,         // ""
     STRING_ESCAPE,    // got '\' in string literal
-    MLSTRING_S1,      // "
-    MLSTRING_S2,      // ""
-    MLSTRING_S3,      // """\n
+    MLSTRING_S1,      // ""
+    MLSTRING_S2,      // """\n
     MLSTRING_E1,      // """
     MLSTRING_E2,      // ""
     MLSTRING_E3,      // "\n
 
     /* Special character states */
-    QUESTIONMARK,     // ?    NFS! 
     COALESCE,         // ??
 } fsm_state_t;
 
@@ -125,11 +124,11 @@ typedef enum {
     TK_LBRACE,        // {
     TK_RBRACE,        // }
     TK_ARROW,         // ->
+    TK_UNDERSCORE,    // _
     
     TK_EOF,           // End of file
     
 } tk_type_t;
-
 
 typedef struct {
     union { 
@@ -151,14 +150,16 @@ typedef struct {
 typedef struct {
     FILE *input;
     fsm_state_t state;
-    size_t line;
+    unsigned int line;
     buffer_t buffer;
 } scanner_t;
 
 token_t get_identifier(char *identifier);
+token_t create_token(tk_type_t type, unsigned int line);
 
 void init_buffer(buffer_t *buffer, size_t initial_capacity);
 void append_to_buffer(buffer_t *buffer, char ch);
 void free_dynamic_buffer(buffer_t *buffer);
+
 
 #endif
