@@ -47,34 +47,29 @@ token_t create_token(tk_type_t type, unsigned int line) {
 }
 
 token_t get_token(scanner_t *scanner) {
+    scanner->state = START; //check if start needed at every return...
     token_t token;
     char symb;
-    int idx = 0;
     int nested_comment_count = 0;
-
-    init_buffer(&scanner->buffer, 2);
 
     // FSM
     while (1) {
         
-        if (symb == '\n') {
-            scanner->line++;
-        }
         symb = fgetc(scanner->input);
+        
+        if (isspace(symb)) {
+            if (symb == '\n') {
+                scanner->line++;
+            }
+            continue;
+        }
         
         switch (scanner->state) {
             
             case START: {
-                if (isspace(symb)) {
-                    if (symb == '\n') {
-                        scanner->line++;
-                    }
-                    break;
-                }
-                
                 switch(symb) {
                     /* SINGULAR SYMBOL LEXEMS */
-                    case 'EOF':
+                    case EOF:
                         return create_token(TK_EOF, scanner->line);
                     case '(':
                         return create_token(TK_LPAR, scanner->line);
@@ -120,14 +115,17 @@ token_t get_token(scanner_t *scanner) {
                         scanner->state = COALESCE;
                         continue;
                 }
+
                 if (isdigit(symb)) {
                     scanner->state = DIGIT;
+                    init_buffer(&scanner->buffer, 2);
                     append_to_buffer(&scanner->buffer, symb);
                     break;
                 }
 
                 if (isalpha(symb) || symb == '_') {
                     scanner->state = IDENTIFIER;
+                    init_buffer(&scanner->buffer, 2);
                     append_to_buffer(&scanner->buffer, symb);
                     break;
                 }
@@ -144,25 +142,27 @@ token_t get_token(scanner_t *scanner) {
                 if (isalpha(symb) || isdigit(symb) || symb == '_') {
                     append_to_buffer(&scanner->buffer, symb);
                 } else if (symb == '?') {
+                    append_to_buffer(&scanner->buffer, symb);
                     scanner->state = IDENTIFIER_TYPE;
                 } else {
                     char *identifier = buffer_to_string(&scanner->buffer);
 
                     if (strcmp(identifier, "_") == 0) {
-                        free(identifier); // Free the allocated memory for identifier
+                        free(identifier); 
+                        free_buffer(&scanner->buffer);
                         return create_token(TK_UNDERSCORE, scanner->line);
                     }
 
                     token_t token = get_identifier(identifier, scanner->line);
                     
                     if (token.type != TK_IDENTIFIER) {
-                        free(identifier); // If it's a keyword, we don't need the string anymore
+                        free(identifier); // If it's a keyword, we dont need the string anymore
                     }
-                    // Note: If it's a TK_IDENTIFIER, the string will be associated with the token. 
-                    // Ensure you free this string later when done using the token.
 
-                    //scanner->state = START; // Reset state
-                    return token; // Return the identified token
+                    free_buffer(&scanner->buffer);
+                    scanner->state = START; 
+
+                    return token;
                 }
                 break;
             }
@@ -171,11 +171,11 @@ token_t get_token(scanner_t *scanner) {
                 ungetc(symb, scanner->input);  // Already got ?, next symbol is different token
                 char* identifier_str = buffer_to_string(&scanner->buffer);
                 if (strcmp(identifier_str, "double?") == 0) {
-                    create_token(TK_KW_DOUBLE_OPT, scanner->line);
+                    token_t token = create_token(TK_KW_DOUBLE_OPT, scanner->line);
                 } else if (strcmp(identifier_str, "int?") == 0) {
-                    create_token(TK_KW_INT_OPT, scanner->line);
+                    token_t token = create_token(TK_KW_INT_OPT, scanner->line);
                 } else if (strcmp(identifier_str, "string?") == 0) {
-                    create_token(TK_KW_STRING_OPT, scanner->line);
+                    token_t token = create_token(TK_KW_STRING_OPT, scanner->line);
                 } else {
                     /*
                     TODO
@@ -183,13 +183,12 @@ token_t get_token(scanner_t *scanner) {
                     */
                     exit(-1);
                 }
+
                 free(identifier_str);
-                
-                // Reset state
-                scanner->state = START;
                 free_buffer(&scanner->buffer);
+                scanner->state = START;
+            
                 return token;
-                break;
             }
 
             case DIV: {
@@ -253,7 +252,7 @@ token_t get_token(scanner_t *scanner) {
                         scanner->state = BLCOMMENT;
                     }
                 } else if (symb == '*') {  
-                    // If we get another *, stay in BLCOMMENT_E1 and wait for /
+                    // If we get another *, stay in BLCOMMENT_E1 and wait for '/'
                 } else {
                     scanner->state = BLCOMMENT;  
                 }
@@ -262,37 +261,37 @@ token_t get_token(scanner_t *scanner) {
 
             case LT: {
                 if (symb == '=') {  
-                    return create_token(TK_LE, scanner->line);  // Less or equal
+                    return create_token(TK_LE, scanner->line);  // Less or equal <=
                 } else {
                     ungetc(symb, scanner->input);  
-                    return create_token(TK_LT, scanner->line);  // Just less than
+                    return create_token(TK_LT, scanner->line);  // Just less than <
                 }
             }
 
             case GT: {
                 if (symb == '=') {  
-                    return create_token(TK_GE, scanner->line);  // Greater or equal
+                    return create_token(TK_GE, scanner->line);  // Greater or equal >=
                 } else {
                     ungetc(symb, scanner->input);  
-                    return create_token(TK_GT, scanner->line);  // Just greater than
+                    return create_token(TK_GT, scanner->line);  // Just greater than >
                 }
             }
 
             case ASSIGN: {
                 if (symb == '=') {  
-                    return create_token(TK_EQ, scanner->line);  // Equal
+                    return create_token(TK_EQ, scanner->line);  // Equal == 
                 } else {
                     ungetc(symb, scanner->input);  
-                    return create_token(TK_ASSIGN, scanner->line);  // Just assignment
+                    return create_token(TK_ASSIGN, scanner->line);  // Just assignment =
                 }
             }
 
             case UNWRAP: {
                 if (symb == '=') {  
-                    return create_token(TK_NEQ, scanner->line);  // Not equal
+                    return create_token(TK_NEQ, scanner->line);  // Not equal != 
                 } else {
                     ungetc(symb, scanner->input);  
-                    return create_token(TK_UNWRAP, scanner->line); // Just unwrap
+                    return create_token(TK_UNWRAP, scanner->line); // Just unwrap !
                 }
             }
 
