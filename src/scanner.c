@@ -453,11 +453,11 @@ token_t get_token(scanner_t *scanner) {
             }
             
             case MINUS: {
-                char peek_symb = fgetc(scanner->input);
-                if (peek_symb == '>') {
+                
+                if (symb == '>') {
                     return create_token(TK_ARROW, scanner->line);
                 } else {
-                    ungetc(peek_symb, scanner->input);
+                    ungetc(symb, scanner->input);
                     return create_token(TK_MINUS, scanner->line);
                 }
                 break;
