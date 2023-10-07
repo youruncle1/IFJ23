@@ -15,7 +15,7 @@ authors: xpolia05
 #include <stdbool.h>
 
 token_t get_identifier(char *identifier, unsigned int line) {
-    if (strcmp(identifier, "double") == 0)
+    if (strcmp(identifier, "Double") == 0)
         return (token_t){.type = TK_KW_DOUBLE, .line = line};
     else if (strcmp(identifier, "else") == 0)
         return (token_t){.type = TK_KW_ELSE, .line = line};
@@ -23,7 +23,7 @@ token_t get_identifier(char *identifier, unsigned int line) {
         return (token_t){.type = TK_KW_FUNC, .line = line};
     else if (strcmp(identifier, "if") == 0)
         return (token_t){.type = TK_KW_IF, .line = line};
-    else if (strcmp(identifier, "int") == 0)
+    else if (strcmp(identifier, "Int") == 0)
         return (token_t){.type = TK_KW_INT, .line = line};
     else if (strcmp(identifier, "let") == 0)
         return (token_t){.type = TK_KW_LET, .line = line};
@@ -31,7 +31,7 @@ token_t get_identifier(char *identifier, unsigned int line) {
         return (token_t){.type = TK_KW_NIL, .line = line};
     else if (strcmp(identifier, "return") == 0)
         return (token_t){.type = TK_KW_RETURN, .line = line};
-    else if (strcmp(identifier, "string") == 0)
+    else if (strcmp(identifier, "String") == 0)
         return (token_t){.type = TK_KW_STRING, .line = line};
     else if (strcmp(identifier, "var") == 0)
         return (token_t){.type = TK_KW_VAR, .line = line};
@@ -58,16 +58,24 @@ token_t get_token(scanner_t *scanner) {
         
         symb = fgetc(scanner->input);
         
-        if (isspace(symb)) {
-            if (symb == '\n') {
-                scanner->line++;
-            }
-            continue;
-        }
+        // if (isspace(symb)) {
+        //     if (symb == '\n') {
+        //         scanner->line++;
+        //     }
+        //     continue;
+        // }
         
         switch (scanner->state) {
             
             case START: {
+                if (isspace(symb)) {
+                    if (symb == '\n') {
+                        scanner->line++;
+                    } else {
+                    }
+                    break;
+                }
+
                 switch(symb) {
                     /* SINGULAR SYMBOL LEXEMS */
                     case EOF:
@@ -355,11 +363,11 @@ token_t get_token(scanner_t *scanner) {
             case IDENTIFIER_TYPE: {
                 ungetc(symb, scanner->input);  // Already got ?, next symbol is different token
                 char* identifier_str = buffer_to_string(&scanner->buffer);
-                if (strcmp(identifier_str, "double?") == 0) {
+                if (strcmp(identifier_str, "Double?") == 0) {
                     token_t token = create_token(TK_KW_DOUBLE_OPT, scanner->line);
-                } else if (strcmp(identifier_str, "int?") == 0) {
+                } else if (strcmp(identifier_str, "Int?") == 0) {
                     token_t token = create_token(TK_KW_INT_OPT, scanner->line);
-                } else if (strcmp(identifier_str, "string?") == 0) {
+                } else if (strcmp(identifier_str, "String?") == 0) {
                     token_t token = create_token(TK_KW_STRING_OPT, scanner->line);
                 } else {
                     /*
@@ -440,6 +448,17 @@ token_t get_token(scanner_t *scanner) {
                     // If we get another *, stay in BLCOMMENT_E1 and wait for '/'
                 } else {
                     scanner->state = BLCOMMENT;  
+                }
+                break;
+            }
+            
+            case MINUS: {
+                char peek_symb = fgetc(scanner->input);
+                if (peek_symb == '>') {
+                    return create_token(TK_ARROW, scanner->line);
+                } else {
+                    ungetc(peek_symb, scanner->input);
+                    return create_token(TK_MINUS, scanner->line);
                 }
                 break;
             }
