@@ -15,6 +15,7 @@ authors: xpolia05
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 typedef enum {
     /* NFS - NOT finish state */
@@ -54,21 +55,23 @@ typedef enum {
 
     /* Literal states */
     DIGIT,
-    DOUBLE,
-    DOUBLEDOT,        // NFS: got 0.??
-    DOUBLEEXP,        // NFS: got 0.1e/E?? or 2e/E??        !! exponent can be only integer
-    DOUBLEEXPSIGN,    // NFS: got 0.1e/E+/-?? or 2e/E+/-??
-    EXP,              // FS: 0.1E2 or 2E4
-    EXPSIGN,          // FS: 0.1E-2 or 2E+4
-    IDENTIFIER_OMIT,  // single '_'    
-    IDENTIFIER,
-    IDENTIFIER_OPT,   // double?, string?, int?       
+    
+    DECIMAL,          // NFS: got 0.??
+           // NFS: got 0.1e/E?? or 2e/E??        !! exponent can be only integer
+        // NFS: got 0.1e/E+/-?? or 2e/E+/-??
+    EXP,              // NFS: 0.1E? or 2E?
+    EXP_SIGN,          // FS: 0.1E-2 or 2E+4  
+    EXP_NUMBER,
+    IDENTIFIER,     
+    IDENTIFIER_TYPE,  // double?, string?, int?
 
     /* String states TODO Int?*/
     STRING_S,         // "
     STRING_E,         // ""
     STRING_ESCAPE,    // got '\' in string literal
-    MLSTRING_S1,      // ""
+    STRING_ESCAPE_U,
+    STRING_ESCAPE_U_VALUE,
+    STRING_MULTI,      // ""
     MLSTRING_S2,      // """\n
     MLSTRING_E1,      // """
     MLSTRING_E2,      // ""
@@ -82,14 +85,17 @@ typedef enum {
 typedef enum {
     /* Keywords */
     TK_KW_DOUBLE,
+    TK_KW_DOUBLE_OPT,
     TK_KW_ELSE,
     TK_KW_FUNC,
     TK_KW_IF,
     TK_KW_INT,
+    TK_KW_INT_OPT,
     TK_KW_LET,
     TK_KW_NIL,
     TK_KW_RETURN,
     TK_KW_STRING,
+    TK_KW_STRING_OPT,
     TK_KW_VAR,
     TK_KW_WHILE,
 
@@ -154,12 +160,14 @@ typedef struct {
     buffer_t buffer;
 } scanner_t;
 
-token_t get_identifier(char *identifier);
+token_t get_identifier(char *identifier, unsigned int line);
 token_t create_token(tk_type_t type, unsigned int line);
+token_t get_token(scanner_t *scanner);
 
 void init_buffer(buffer_t *buffer, size_t initial_capacity);
 void append_to_buffer(buffer_t *buffer, char ch);
-void free_dynamic_buffer(buffer_t *buffer);
+char* buffer_to_string(buffer_t *buffer);
+void free_buffer(buffer_t *buffer);
 
 
 #endif

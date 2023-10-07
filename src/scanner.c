@@ -51,6 +51,7 @@ token_t get_token(scanner_t *scanner) {
     token_t token;
     char symb;
     int nested_comment_count = 0;
+    int unicode_val, hex_digits_count;
 
     // FSM
     while (1) {
@@ -76,9 +77,9 @@ token_t get_token(scanner_t *scanner) {
                     case ')':
                         return create_token(TK_RPAR, scanner->line);
                     case '{':
-                        return create_token(TK_RBRACE, scanner->line);
-                    case '}':
                         return create_token(TK_LBRACE, scanner->line);
+                    case '}':
+                        return create_token(TK_RBRACE, scanner->line);
                     case ':':
                         return create_token(TK_COLON, scanner->line);
                     case ';':
@@ -94,6 +95,7 @@ token_t get_token(scanner_t *scanner) {
                         scanner->state = DIV;
                         continue;
                     case '"':
+                        init_buffer(&scanner->buffer, 5);
                         scanner->state = STRING_S;
                         continue;
                     case '-':
@@ -138,6 +140,189 @@ token_t get_token(scanner_t *scanner) {
                 break;
             }
 
+            case STRING_S: {
+                if (symb == '\\') { 
+                    scanner->state = STRING_ESCAPE;
+                } else if (symb == '"') {
+                    char* str_val = buffer_to_string(&scanner->buffer);
+                    free_buffer(&scanner->buffer);
+                    token = create_token(TK_STRING, scanner->line);
+                    token.data.String = str_val;
+                    return token;
+                } else if (symb == '\n' || symb == EOF) {
+                    /* 
+                    TODO ERROR HANDLING (ERROR_EXIT): 
+                    Invalid string literal 
+                    */
+                    exit(-1);
+                } else if (symb > 31 && symb != '"') {
+                    append_to_buffer(&scanner->buffer, symb);
+                } else {
+                    /* 
+                    TODO ERROR HANDLING (ERROR_EXIT): 
+                    Invalid character in string literal 
+                    */
+                    exit(-1);
+                }
+                break;
+            }
+
+            case STRING_ESCAPE: {
+                switch (symb) {
+                    case '"': 
+                        append_to_buffer(&scanner->buffer, '"');
+                        scanner->state = STRING_S;
+                        break;
+                    case 'n': 
+                        append_to_buffer(&scanner->buffer, '\n');
+                        scanner->state = STRING_S;
+                        break;
+                    case 'r':
+                        append_to_buffer(&scanner->buffer, '\r');
+                        scanner->state = STRING_S;
+                        break;
+                    case 't': 
+                        append_to_buffer(&scanner->buffer, '\t');
+                        scanner->state = STRING_S;
+                        break;
+                    case '\\': 
+                        append_to_buffer(&scanner->buffer, '\\');
+                        scanner->state = STRING_S;
+                        break;
+                    case 'u':
+                        scanner->state = STRING_ESCAPE_U;
+                        break;
+                    default:
+                        /* 
+                        TODO ERROR HANDLING (ERROR_EXIT): 
+                        Invalid escape sequence in string literal 
+                        */
+                        exit(-1);
+                }
+                break;
+            }
+
+            case STRING_ESCAPE_U: {
+                if (symb == '{') {
+                    unicode_val = 0;
+                    hex_digits_count = 0;
+                    scanner->state = STRING_ESCAPE_U_VALUE;
+                } else {
+                    /* 
+                    TODO ERROR HANDLING (ERROR_EXIT): 
+                    Expected '{' after \u in string literal 
+                    */
+                    exit(-1);
+                }
+                break;
+            }
+
+            case STRING_ESCAPE_U_VALUE: {
+                if (isxdigit(symb)) {
+                    hex_digits_count++;
+                    if (hex_digits_count > 8) {
+                        /* TODO ERROR HANDLING (ERROR_EXIT): Too many digits in \u{dd} escape sequence */
+                        exit(-1);
+                    }
+                    unicode_val = unicode_val * 16 + (isdigit(symb) ? (symb - '0') : (toupper(symb) - 'A' + 10));
+                } else if (symb == '}') {
+                    if (unicode_val > 255) {
+                        /* TODO ERROR HANDLING (ERROR_EXIT): Value out of range in \u{dd} escape sequence */
+                        exit(-1);
+                    }
+                    char actual_char = (char)unicode_val;
+                    append_to_buffer(&scanner->buffer, actual_char);
+                    scanner->state = STRING_S; // Return to string processing state
+                } else {
+                    /* TODO ERROR HANDLING (ERROR_EXIT): Expected '}' or hex digit in \u{dd} escape sequence */
+                    exit(-1);
+                }
+                break;
+            }
+            
+            case DIGIT: {
+                if (isdigit(symb)) {
+                    append_to_buffer(&scanner->buffer, symb);
+                } else if (symb == '.') {
+                    append_to_buffer(&scanner->buffer, symb);
+                    scanner->state = DECIMAL;
+                } else if (symb == 'e' || symb == 'E') {
+                    append_to_buffer(&scanner->buffer, symb);
+                    scanner->state = EXP;
+                } else {
+                    ungetc(symb, scanner->input);
+
+                    char *num_str = buffer_to_string(&scanner->buffer);
+                    unsigned long long int_val = strtoull(num_str, NULL, 10);
+                    free(num_str);
+                    free_buffer(&scanner->buffer);
+                    token = create_token(TK_INT, scanner->line);
+                    token.data.Int = int_val;
+                    return token;
+                }
+                break;
+            }
+
+            case DECIMAL: {
+                if (isdigit(symb)) {
+                    append_to_buffer(&scanner->buffer, symb);
+                } else if (symb == 'e' || symb == 'E') {
+                    append_to_buffer(&scanner->buffer, symb);
+                    scanner->state = EXP;
+                } else {
+                    ungetc(symb, scanner->input); 
+                    char *num_str = buffer_to_string(&scanner->buffer);
+                    double double_val = strtod(num_str, NULL);
+                    free(num_str);
+                    free_buffer(&scanner->buffer);
+                    token = create_token(TK_DOUBLE, scanner->line);
+                    token.data.Double = double_val;
+                    return token;
+                }
+                break;
+            }
+
+            case EXP: {
+                if (symb == '+' || symb == '-') {
+                    append_to_buffer(&scanner->buffer, symb);
+                    scanner->state = EXP_SIGN;
+                } else if (isdigit(symb)) {
+                    append_to_buffer(&scanner->buffer, symb);
+                    scanner->state = EXP_NUMBER;
+                } else {
+                    // Error: unexpected character in exponent
+                    exit(-1);
+                }
+                break;
+            }
+
+            case EXP_SIGN: {
+                if (isdigit(symb)) {
+                    append_to_buffer(&scanner->buffer, symb);
+                    scanner->state = EXP_NUMBER;
+                } else {
+                    // Error: unexpected character after exponent sign
+                    exit(-1);
+                }
+                break;
+            }
+
+            case EXP_NUMBER: {
+                if (isdigit(symb)) {
+                    append_to_buffer(&scanner->buffer, symb);
+                } else {
+                    ungetc(symb, scanner->input);
+                    char *num_str = buffer_to_string(&scanner->buffer);
+                    double double_val = strtod(num_str, NULL);
+                    free(num_str);
+                    free_buffer(&scanner->buffer);
+                    token = create_token(TK_DOUBLE, scanner->line);
+                    token.data.Double = double_val;
+                    return token;
+                }
+                break;
+            }
+
             case IDENTIFIER: {
                 if (isalpha(symb) || isdigit(symb) || symb == '_') {
                     append_to_buffer(&scanner->buffer, symb);
@@ -160,8 +345,8 @@ token_t get_token(scanner_t *scanner) {
                     }
 
                     free_buffer(&scanner->buffer);
-                    scanner->state = START; 
-
+                    //scanner->state = START; 
+                    ungetc(symb, scanner->input);
                     return token;
                 }
                 break;
@@ -186,7 +371,7 @@ token_t get_token(scanner_t *scanner) {
 
                 free(identifier_str);
                 free_buffer(&scanner->buffer);
-                scanner->state = START;
+                //scanner->state = START;
             
                 return token;
             }
