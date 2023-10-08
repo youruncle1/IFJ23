@@ -11,6 +11,7 @@ authors: xpolia05
 */
 
 #include "scanner.h"
+#include "error.h"
 #include <string.h>
 #include <stdbool.h>
 
@@ -47,7 +48,7 @@ token_t create_token(tk_type_t type, unsigned int line) {
 }
 
 token_t get_token(scanner_t *scanner) {
-    scanner->state = START; //check if start needed at every return...
+    scanner->state = START;
     token_t token;
     char symb;
     int nested_comment_count = 0;
@@ -58,21 +59,13 @@ token_t get_token(scanner_t *scanner) {
         
         symb = fgetc(scanner->input);
         
-        // if (isspace(symb)) {
-        //     if (symb == '\n') {
-        //         scanner->line++;
-        //     }
-        //     continue;
-        // }
-        
         switch (scanner->state) {
             
             case START: {
                 if (isspace(symb)) {
-                    if (symb == '\n') {
+                    if (symb == '\n') 
                         scanner->line++;
-                    } else {
-                    }
+                    
                     break;
                 }
 
@@ -98,6 +91,7 @@ token_t get_token(scanner_t *scanner) {
                         return create_token(TK_PLUS, scanner->line);
                     case '*':
                         return create_token(TK_MUL, scanner->line);
+                    
                     /* MULTI SYMBOL LEXEMS */
                     case '/':
                         scanner->state = DIV;
@@ -139,13 +133,7 @@ token_t get_token(scanner_t *scanner) {
                     append_to_buffer(&scanner->buffer, symb);
                     break;
                 }
-                /*
-                TODO
-                ERROR 
-                HANDLING (ERROR_EXIT)
-                */
-                exit(1);
-                break;
+                handle_error(LEXICAL_ERROR, scanner->line, "Unsupported symbol found");
             }
 
             case STRING_S: {
@@ -158,19 +146,16 @@ token_t get_token(scanner_t *scanner) {
                     token.data.String = str_val;
                     return token;
                 } else if (symb == '\n' || symb == EOF) {
-                    /* 
-                    TODO ERROR HANDLING (ERROR_EXIT): 
-                    Invalid string literal 
-                    */
-                    exit(-1);
+                   if (symb == '\n'){
+                    handle_error(LEXICAL_ERROR, scanner->line, "Unexpected new-line character in string literal");
+                   } else {
+                    handle_error(LEXICAL_ERROR, scanner->line, "Unexpected end-of-file in string literal");
+                   }
+                    
                 } else if (symb > 31 && symb != '"') {
                     append_to_buffer(&scanner->buffer, symb);
                 } else {
-                    /* 
-                    TODO ERROR HANDLING (ERROR_EXIT): 
-                    Invalid character in string literal 
-                    */
-                    exit(-1);
+                    handle_error(LEXICAL_ERROR, scanner->line, "Unsupported character value in string literal");
                 }
                 break;
             }
@@ -201,11 +186,7 @@ token_t get_token(scanner_t *scanner) {
                         scanner->state = STRING_ESCAPE_U;
                         break;
                     default:
-                        /* 
-                        TODO ERROR HANDLING (ERROR_EXIT): 
-                        Invalid escape sequence in string literal 
-                        */
-                        exit(-1);
+                        handle_error(LEXICAL_ERROR, scanner->line, "Unsupported escape sequence in string literal");
                 }
                 break;
             }
@@ -216,11 +197,7 @@ token_t get_token(scanner_t *scanner) {
                     hex_digits_count = 0;
                     scanner->state = STRING_ESCAPE_U_VALUE;
                 } else {
-                    /* 
-                    TODO ERROR HANDLING (ERROR_EXIT): 
-                    Expected '{' after \u in string literal 
-                    */
-                    exit(-1);
+                    handle_error(LEXICAL_ERROR, scanner->line, "Expected '{' after \\u in string literal");
                 }
                 break;
             }
@@ -229,21 +206,18 @@ token_t get_token(scanner_t *scanner) {
                 if (isxdigit(symb)) {
                     hex_digits_count++;
                     if (hex_digits_count > 8) {
-                        /* TODO ERROR HANDLING (ERROR_EXIT): Too many digits in \u{dd} escape sequence */
-                        exit(-1);
+                        handle_error(LEXICAL_ERROR, scanner->line, "Too many digits in \\u{dd} escape sequence");
                     }
                     unicode_val = unicode_val * 16 + (isdigit(symb) ? (symb - '0') : (toupper(symb) - 'A' + 10));
                 } else if (symb == '}') {
                     if (unicode_val > 255) {
-                        /* TODO ERROR HANDLING (ERROR_EXIT): Value out of range in \u{dd} escape sequence */
-                        exit(-1);
+                        handle_error(LEXICAL_ERROR, scanner->line, "Value out of range in \\u{dd} escape sequence");
                     }
                     char actual_char = (char)unicode_val;
                     append_to_buffer(&scanner->buffer, actual_char);
-                    scanner->state = STRING_S; // Return to string processing state
+                    scanner->state = STRING_S; // Succesful \u{dd} parse, return to string processing state
                 } else {
-                    /* TODO ERROR HANDLING (ERROR_EXIT): Expected '}' or hex digit in \u{dd} escape sequence */
-                    exit(-1);
+                    handle_error(LEXICAL_ERROR, scanner->line, "Expected '}' or hex digit in \\u{dd} escape sequence");
                 }
                 break;
             }
@@ -298,8 +272,7 @@ token_t get_token(scanner_t *scanner) {
                     append_to_buffer(&scanner->buffer, symb);
                     scanner->state = EXP_NUMBER;
                 } else {
-                    // Error: unexpected character in exponent
-                    exit(-1);
+                    handle_error(LEXICAL_ERROR, scanner->line, "Unexpected character in double literal exponent");
                 }
                 break;
             }
@@ -309,8 +282,7 @@ token_t get_token(scanner_t *scanner) {
                     append_to_buffer(&scanner->buffer, symb);
                     scanner->state = EXP_NUMBER;
                 } else {
-                    // Error: unexpected character after exponent sign
-                    exit(-1);
+                    handle_error(LEXICAL_ERROR, scanner->line, "Unexpected character after double literal exponent");
                 }
                 break;
             }
@@ -349,19 +321,19 @@ token_t get_token(scanner_t *scanner) {
                     token_t token = get_identifier(identifier, scanner->line);
                     
                     if (token.type != TK_IDENTIFIER) {
-                        free(identifier); // If it's a keyword, we dont need the string anymore
+                        free(identifier); // If its a keyword, free the string mem
                     }
 
                     free_buffer(&scanner->buffer);
-                    //scanner->state = START; 
-                    ungetc(symb, scanner->input);
+                    
+                    ungetc(symb, scanner->input);  // will iterate once more before returning, stealing next token's symbol
                     return token;
                 }
                 break;
             }
 
             case IDENTIFIER_TYPE: {
-                ungetc(symb, scanner->input);  // Already got ?, next symbol is different token
+                ungetc(symb, scanner->input);  // Already got ?, current symbol is from different token
                 char* identifier_str = buffer_to_string(&scanner->buffer);
                 if (strcmp(identifier_str, "Double?") == 0) {
                     token_t token = create_token(TK_KW_DOUBLE_OPT, scanner->line);
@@ -370,16 +342,11 @@ token_t get_token(scanner_t *scanner) {
                 } else if (strcmp(identifier_str, "String?") == 0) {
                     token_t token = create_token(TK_KW_STRING_OPT, scanner->line);
                 } else {
-                    /*
-                    TODO
-                    ERROR HANDLING
-                    */
-                    exit(-1);
+                    handle_error(LEXICAL_ERROR, scanner->line, "Unknown optional type, did you mean: Double? / String? / Int?");
                 }
 
                 free(identifier_str);
                 free_buffer(&scanner->buffer);
-                //scanner->state = START;
             
                 return token;
             }
@@ -390,8 +357,8 @@ token_t get_token(scanner_t *scanner) {
                 } else if (symb == '*') { 
                     scanner->state = BLCOMMENT;
                     nested_comment_count = 1;
-                } else {  // Just a division operator
-                    ungetc(symb, scanner->input);  // Revert the last char read
+                } else {                        // Just a division operator '/'
+                    ungetc(symb, scanner->input);  
                     return create_token(TK_DIV, scanner->line);
                 }
                 break;
@@ -408,7 +375,7 @@ token_t get_token(scanner_t *scanner) {
                 } while (symb != EOF);
 
                 if (symb == EOF) {
-                    ungetc(symb, scanner->input);  // Revert the EOF character
+                    ungetc(symb, scanner->input);  // Revert the EOF character (check if needed?)
                     scanner->state = START;
                 }
                 break;
@@ -420,16 +387,12 @@ token_t get_token(scanner_t *scanner) {
                 } else if (symb == '/') {
                     char peek_symb = fgetc(scanner->input);
                     if (peek_symb == '*') {
-                        nested_comment_count++;  // New nested comment found
+                        nested_comment_count++; 
                     } else {
-                        ungetc(peek_symb, scanner->input);  // Revert the last char read
+                        ungetc(peek_symb, scanner->input);
                     }
                 } else if (symb == EOF) {
-                    /*
-                    TODO
-                    ERROR: EOF inside a comment
-                    */
-                    exit(-1);
+                    handle_error(LEXICAL_ERROR, scanner->line, "End-of-File found inside block comment");
                 } else if (symb == '\n') {
                     scanner->line++;
                 }
@@ -438,7 +401,7 @@ token_t get_token(scanner_t *scanner) {
 
             case BLCOMMENT_E1: {
                 if (symb == '/') {
-                    nested_comment_count--;  // Close one nested comment
+                    nested_comment_count--;  // One less nested comment
                     if (nested_comment_count == 0) {  // All nested comments are closed
                         scanner->state = START;
                     } else {  
@@ -455,10 +418,10 @@ token_t get_token(scanner_t *scanner) {
             case MINUS: {
                 
                 if (symb == '>') {
-                    return create_token(TK_ARROW, scanner->line);
+                    return create_token(TK_ARROW, scanner->line);  // Arrow ->
                 } else {
                     ungetc(symb, scanner->input);
-                    return create_token(TK_MINUS, scanner->line);
+                    return create_token(TK_MINUS, scanner->line);  // Just minus -
                 }
                 break;
             }
@@ -503,11 +466,7 @@ token_t get_token(scanner_t *scanner) {
                 if (symb == '?') {  
                     return create_token(TK_COALESCE, scanner->line);
                 } else {
-                    /*
-                    TODO
-                    ERROR HANDLING (ERROR_EXIT): Unexpected character after ?
-                    */
-                    exit(-1);
+                    handle_error(LEXICAL_ERROR, scanner->line, "Unexpected character after '?', expected '?'?'");
                 }
             }
         }
@@ -517,11 +476,7 @@ token_t get_token(scanner_t *scanner) {
 void init_buffer(buffer_t *buffer, size_t initial_capacity) {
     buffer->data = (char *)malloc(initial_capacity);
     if (!buffer->data) {
-        /* 
-        TODO
-        ERROR HANDLE
-        */
-        exit(-1);
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "Memory allocation error!");
     }
     buffer->size = 0;
     buffer->capacity = initial_capacity;
@@ -532,12 +487,8 @@ void append_to_buffer(buffer_t *buffer, char ch) {
         size_t new_capacity = buffer->capacity * 2; 
         char *new_data = (char *)realloc(buffer->data, new_capacity);
         if (!new_data) {
-            /* 
-            TODO
-            ERROR HANDLE
-            */
             free(buffer->data);
-            exit(-1);
+            handle_error(INTERNAL_COMPILER_ERROR, 0, "Memory allocation error!");
         }
         buffer->data = new_data;
         buffer->capacity = new_capacity;
@@ -548,11 +499,7 @@ void append_to_buffer(buffer_t *buffer, char ch) {
 char* buffer_to_string(buffer_t *buffer) {
     char *result = (char *)malloc(buffer->size + 1);  // +1 for the null terminator
     if (!result) {
-        /* 
-        TODO
-        ERROR HANDLE
-        */
-        exit(-1);
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "Memory allocation error!");
     }
 
     memcpy(result, buffer->data, buffer->size);

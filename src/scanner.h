@@ -2,7 +2,7 @@
 IFJ PROJEKT 2023/2024
 file: "src/scanner.h"
 
-Lexical analysis
+Lexical analysis - header file
 
 authors: xpolia05
          xbencs00
@@ -66,13 +66,14 @@ typedef enum {
     IDENTIFIER_TYPE,  // double?, string?, int?
 
     /* String states TODO Int?*/
+    DETECT_STRING_TYPE,
     STRING_S,         // "
     STRING_E,         // ""
     STRING_ESCAPE,    // got '\' in string literal
     STRING_ESCAPE_U,
     STRING_ESCAPE_U_VALUE,
     STRING_MULTI,      // ""
-    MLSTRING_S2,      // """\n
+    MLSTRING_S,      // """\n
     MLSTRING_E1,      // """
     MLSTRING_E2,      // ""
     MLSTRING_E3,      // "\n

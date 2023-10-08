@@ -51,15 +51,14 @@ const char* token_type_to_string(tk_type_t type) {
 
 int main() {
     scanner_t scanner;
-    scanner.input = stdin;       // Set the scanner input to standard input
-    scanner.line = 1;           // Initialize line count
+    scanner.input = stdin;      
+    scanner.line = 1;           
 
     token_t token;
 
     do {
         token = get_token(&scanner);
         
-        // Basic print of the token's type and line
         printf("Token type: %s, Line: %u", token_type_to_string(token.type), token.line);
         
         switch (token.type) {
@@ -67,7 +66,7 @@ int main() {
             case TK_IDENTIFIER_OPT:
             case TK_STRING:
                 printf(", Data: %s", token.data.String);
-                free(token.data.String);  // Free the memory for string data
+                free(token.data.String); 
                 break;
             case TK_DOUBLE:
                 printf(", Data: %lf", token.data.Double);
@@ -76,12 +75,12 @@ int main() {
                 printf(", Data: %llu", token.data.Int);
                 break;
             default:
-                break;  // For other types, we do nothing
+                break;  
         }
 
-        printf("\n");  // Newline for better readability
+        printf("\n");  
 
-    } while (token.type != TK_EOF);  // Continue until the End-Of-File token is found
+    } while (token.type != TK_EOF);  
 
     return 0;
 }
