@@ -18,68 +18,39 @@ authors: xpolia05
 #include <ctype.h>
 
 typedef enum {
-    /* NFS - NOT finish state */
-    
     /* Start state */
     START,
 
     /* Comment states */
-    OLCOMMENT,        // //
-    OLCOMMENT_E,      // end of one-line comment (EOF)
-    BLCOMMENT,        // /*
-    BLCOMMENT_E1,     // NFS: multi-line comment end 1 (got *)
-    MLCOMMENT_E2,     // FS: end of multi-line comment (got */)
+    OLCOMMENT,
+    BLCOMMENT,
+    BLCOMMENT_E,
 
     /* Arithmetic and other operator states */
-    DIV,              // /
-    PLUS,             // +
-    MUL,              // *  
-    MINUS,            // -
-    ARROW,            // ->
-    LT,               // <
-    LE,               // <=
-    GT,               // >
-    GE,               // >=
-    ASSIGN,           // =
-    EQ,               // ==
-    UNWRAP,           // !
-    NEQ,              // !=
-    /* Punctuation states */
-    LPAR,             // (
-    RPAR,             // )
-    LBRACE,           // {
-    RBRACE,           // }
-    COMMA,            // ,
-    COLON,            // :
-    SEMICOLON,        // ;
+    DIV,
+    MINUS,
+    LT,
+    GT,
+    ASSIGN,
+    UNWRAP,
 
     /* Literal states */
     DIGIT,
-    
-    DECIMAL,          // NFS: got 0.??
-           // NFS: got 0.1e/E?? or 2e/E??        !! exponent can be only integer
-        // NFS: got 0.1e/E+/-?? or 2e/E+/-??
-    EXP,              // NFS: 0.1E? or 2E?
-    EXP_SIGN,          // FS: 0.1E-2 or 2E+4  
+    DECIMAL,
+    EXP,
+    EXP_SIGN,
     EXP_NUMBER,
-    IDENTIFIER,     
-    IDENTIFIER_TYPE,  // double?, string?, int?
+    IDENTIFIER,
+    IDENTIFIER_TYPE,
 
-    /* String states TODO Int?*/
-    DETECT_STRING_TYPE,
-    STRING_S,         // "
-    STRING_E,         // ""
-    STRING_ESCAPE,    // got '\' in string literal
+    /* String states */
+    STRING,
+    STRING_ESCAPE,
     STRING_ESCAPE_U,
     STRING_ESCAPE_U_VALUE,
-    STRING_MULTI,      // ""
-    MLSTRING_S,      // """\n
-    MLSTRING_E1,      // """
-    MLSTRING_E2,      // ""
-    MLSTRING_E3,      // "\n
 
     /* Special character states */
-    COALESCE,         // ??
+    COALESCE,
 } fsm_state_t;
 
 

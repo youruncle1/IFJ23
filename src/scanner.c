@@ -15,6 +15,15 @@ authors: xpolia05
 #include <string.h>
 #include <stdbool.h>
 
+/*  
+        TODO 
+
+    1. create working multiline string literal parse
+    2. comment the code (?doxygen?)
+    3. (?) move string logic into different files; string.c/.h  
+
+*/
+
 token_t get_identifier(char *identifier, unsigned int line) {
     if (strcmp(identifier, "Double") == 0)
         return (token_t){.type = TK_KW_DOUBLE, .line = line};
@@ -98,7 +107,7 @@ token_t get_token(scanner_t *scanner) {
                         continue;
                     case '"':
                         init_buffer(&scanner->buffer, 5);
-                        scanner->state = STRING_S;
+                        scanner->state = STRING;
                         continue;
                     case '-':
                         scanner->state = MINUS;
@@ -136,7 +145,7 @@ token_t get_token(scanner_t *scanner) {
                 handle_error(LEXICAL_ERROR, scanner->line, "Unsupported symbol found");
             }
 
-            case STRING_S: {
+            case STRING: {
                 if (symb == '\\') { 
                     scanner->state = STRING_ESCAPE;
                 } else if (symb == '"') {
@@ -164,23 +173,23 @@ token_t get_token(scanner_t *scanner) {
                 switch (symb) {
                     case '"': 
                         append_to_buffer(&scanner->buffer, '"');
-                        scanner->state = STRING_S;
+                        scanner->state = STRING;
                         break;
                     case 'n': 
                         append_to_buffer(&scanner->buffer, '\n');
-                        scanner->state = STRING_S;
+                        scanner->state = STRING;
                         break;
                     case 'r':
                         append_to_buffer(&scanner->buffer, '\r');
-                        scanner->state = STRING_S;
+                        scanner->state = STRING;
                         break;
                     case 't': 
                         append_to_buffer(&scanner->buffer, '\t');
-                        scanner->state = STRING_S;
+                        scanner->state = STRING;
                         break;
                     case '\\': 
                         append_to_buffer(&scanner->buffer, '\\');
-                        scanner->state = STRING_S;
+                        scanner->state = STRING;
                         break;
                     case 'u':
                         scanner->state = STRING_ESCAPE_U;
@@ -215,7 +224,7 @@ token_t get_token(scanner_t *scanner) {
                     }
                     char actual_char = (char)unicode_val;
                     append_to_buffer(&scanner->buffer, actual_char);
-                    scanner->state = STRING_S; // Succesful \u{dd} parse, return to string processing state
+                    scanner->state = STRING; // Succesful \u{dd} parse
                 } else {
                     handle_error(LEXICAL_ERROR, scanner->line, "Expected '}' or hex digit in \\u{dd} escape sequence");
                 }
@@ -383,7 +392,7 @@ token_t get_token(scanner_t *scanner) {
 
             case BLCOMMENT: {
                 if (symb == '*') {
-                    scanner->state = BLCOMMENT_E1;
+                    scanner->state = BLCOMMENT_E;
                 } else if (symb == '/') {
                     char peek_symb = fgetc(scanner->input);
                     if (peek_symb == '*') {
@@ -399,7 +408,7 @@ token_t get_token(scanner_t *scanner) {
                 break;
             }
 
-            case BLCOMMENT_E1: {
+            case BLCOMMENT_E: {
                 if (symb == '/') {
                     nested_comment_count--;  // One less nested comment
                     if (nested_comment_count == 0) {  // All nested comments are closed
@@ -408,7 +417,7 @@ token_t get_token(scanner_t *scanner) {
                         scanner->state = BLCOMMENT;
                     }
                 } else if (symb == '*') {  
-                    // If we get another *, stay in BLCOMMENT_E1 and wait for '/'
+                    // If we get another *, stay in BLCOMMENT_E and wait for '/'
                 } else {
                     scanner->state = BLCOMMENT;  
                 }
