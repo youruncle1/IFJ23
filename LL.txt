@@ -1,30 +1,44 @@
-<prog> -> <func_decl> <prog>
-<prog> -> <statement> <prog>
-<prog> -> EOF
-<prog> -> ε
-<func_decl> -> func ID ( <parameters> ) -> <type> { <statement_block> }
-<statement_block> -> <statement> <statement_block>
-<statement> -> let ID <var>
-<statement> -> var ID <var>
-<statement> -> ID = <var_assign>
-// ako funguje ID premennej a funkcie (ako zistime o ktoru sa jedna)
-<statement> -> ID(<args>)
-<statement> -> while <expr> { <statement_block> }
-<statement> -> if <expr> { <statement_block> } <else>
-<statement> -> if ID { <statement_block> } <else>
-<statement> -> return <expr>
-<statement> -> ε
-<else> -> else <expr> { <statement_block> }
-<else -> ε
-// doriesit <type> (=)
-<var> -> : <type> = <var_assign>
-<var> -> : <type>
-<var> -> = <var_assign>
-<var_assign> -> <term>
-<var_assign> -> <expr>
-<var_assign> -> ID(<args>)
-
-<args> -> <term> <args_n>
-<args> -> ε
-<args_n> -> <args>
-<args_n> -> ε
+1. <program> -> <block_contents>
+2. <block_contents> -> <block_content> <block_contents>
+3. <block_contents> -> ε
+4. <block_content> -> <variable_declaration>
+5. <block_content> -> <function_definition>
+6. <variable_declaration> -> <variable_type> <identifier> <def_var> ;
+7. <variable_type> -> var <type_opt>
+8. <variable_type> -> let <type_opt>
+9. <type_opt> -> : <type>
+10. <type_opt> -> ε
+11. <def_var> -> = <def_value>
+12. <def_var> -> ε
+13. <def_value> -> <expression>
+14. <def_value> -> <function_call>
+15. <def_value> -> ε
+16. <type> -> int
+17. <type> -> double
+18. <type> -> string
+19. <type> -> void
+20. <function_definition> -> func <identifier> ( <parameter_list> ) -> <return_type> <function_body>
+21. <parameter_list> -> <parameter_definition> <parameter_list_tail>
+22. <parameter_list_tail> -> , <parameter_definition> <parameter_list_tail>
+23. <parameter_list_tail> -> ε
+24. <parameter_definition> -> <identifier> : <type>
+25. <parameter_definition> -> _ : <type>
+26. <return_type> -> <type>
+27. <return_type> -> void
+28. <function_body> -> { <statement_list> }
+29. <statement_list> -> <statement> <statement_list>
+30. <statement_list> -> ε
+31. <statement> -> if <expression> { <statement_list> } else { <statement_list> }
+32. <statement> -> if let <identifier> { <statement_list> } else { <statement_list> }
+33. <statement> -> while <expression> { <statement_list> }
+34. <statement> -> <identifier> = <function_call>
+35. <statement> -> return <expression>
+36. <statement> -> var <identifier> <type_opt> <def_var>
+37. <statement> -> let <identifier> <type_opt> <def_var>
+38. <function_call> -> <identifier> ( <input_parameters> )
+39. <input_parameters> -> <term> <input_parameters_tail>
+40. <input_parameters_tail> -> , <term> <input_parameters_tail>
+41. <input_parameters_tail> -> ε
+42. <term> -> <identifier>
+43. <term> -> <expression>
+44. <term> -> ε
