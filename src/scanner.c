@@ -72,9 +72,10 @@ token_t get_token(scanner_t *scanner) {
             
             case START: {
                 if (isspace(symb)) {
-                    if (symb == '\n') 
+                    if (symb == '\n') {
                         scanner->line++;
-                    
+                        return create_token(TK_EOL, scanner->line-1);
+                    }
                     break;
                 }
 
@@ -379,8 +380,9 @@ token_t get_token(scanner_t *scanner) {
                     if (symb == '\n') {
                         scanner->line++;
                         scanner->state = START;
+                        return create_token(TK_EOL, scanner->line-1);
                         break;
-                    }
+                    } 
                 } while (symb != EOF);
 
                 if (symb == EOF) {

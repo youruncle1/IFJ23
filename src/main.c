@@ -45,6 +45,7 @@ const char* token_type_to_string(tk_type_t type) {
         case TK_ARROW: return "TK_ARROW";
         case TK_UNDERSCORE: return "TK_UNDERSCORE";
         case TK_EOF: return "TK_EOF";
+        case TK_EOL: return "TK_EOL";
         default: return "UNKNOWN_TOKEN_TYPE";
     }
 }

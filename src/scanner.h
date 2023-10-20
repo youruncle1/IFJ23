@@ -105,6 +105,7 @@ typedef enum {
     TK_UNDERSCORE,    // _
     
     TK_EOF,           // End of file
+    TK_EOL,
     
 } tk_type_t;
 
