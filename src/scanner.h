@@ -13,6 +13,7 @@ authors: xpolia05
 #ifndef SCANNER_H
 #define SCANNER_H
 
+#include "string.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -46,7 +47,6 @@ typedef enum {
     /* String states */
     STRING_TYPE,
     MLSTRING,
-    MLSTRING_E,
     STRING,
     STRING_ESCAPE,
     STRING_ESCAPE_U,
@@ -124,12 +124,6 @@ typedef struct {
 } token_t;
 
 typedef struct {
-    char *data;         
-    size_t size;       
-    size_t capacity;
-} buffer_t;
-
-typedef struct {
     FILE *input;
     fsm_state_t state;
     unsigned int line;
@@ -139,13 +133,5 @@ typedef struct {
 token_t get_identifier(char *identifier, unsigned int line);
 token_t create_token(tk_type_t type, unsigned int line);
 token_t get_token(scanner_t *scanner);
-
-void init_buffer(buffer_t *buffer, size_t initial_capacity);
-void append_to_buffer(buffer_t *buffer, char ch);
-void append_string_to_buffer(buffer_t *buffer, const char *str, size_t length);
-char* buffer_to_string(buffer_t *buffer);
-void free_buffer(buffer_t *buffer);
-char* trim_multiline_string_indentation(const char* raw_str_val, int closing_delimiter_indentation);
-
 
 #endif
