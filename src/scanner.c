@@ -19,6 +19,7 @@ authors: xpolia05
 /*  
         TODO 
 
+    1. watch out for memleaks when error exiting in string literals
     2. comment the code (?doxygen?)
 
 */
