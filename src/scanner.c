@@ -61,7 +61,10 @@ token_t get_token(scanner_t *scanner) {
     token_t token;
     char symb;
     int nested_comment_count = 0;
+    int whtespce_count = 0;
+    int closing_delimiter_indentation = 0;
     int unicode_val, hex_digits_count;
+    bool mlstring = false;
 
     // FSM
     while (1) {
@@ -108,7 +111,7 @@ token_t get_token(scanner_t *scanner) {
                         continue;
                     case '"':
                         init_buffer(&scanner->buffer, 5);
-                        scanner->state = STRING;
+                        scanner->state = STRING_TYPE;
                         continue;
                     case '-':
                         scanner->state = MINUS;
@@ -146,6 +149,96 @@ token_t get_token(scanner_t *scanner) {
                 handle_error(LEXICAL_ERROR, scanner->line, "Unsupported symbol found");
             }
 
+            case STRING_TYPE: {
+                if (symb == '"') { // second quote
+                    // Check if this is the start of a multiline string or an empty string
+                    char next_symb = fgetc(scanner->input);
+                    if (next_symb == '"') { // third quote, so start of multiline string
+                        while ((symb = fgetc(scanner->input)) == ' ');
+                        if (symb == '\n') {
+                            scanner->line++;
+                            mlstring = true;
+                            scanner->state = MLSTRING;
+                        } else {
+                            handle_error(LEXICAL_ERROR, scanner->line, "unexpected character after start of multiline string literal");
+                        }
+                    } else {
+                        // Empty one-line string detected
+                        ungetc(next_symb, scanner->input); // Push back the character since it's not part of this string
+                        char* str_val = buffer_to_string(&scanner->buffer); // This should produce an empty string
+                        free_buffer(&scanner->buffer);
+                        token = create_token(TK_STRING, scanner->line);
+                        token.data.String = str_val;
+                        return token;
+                    }
+                } else {
+                    // This is a start of a standard string
+                    ungetc(symb, scanner->input); // Push back the character to be handled in the STRING state
+                    scanner->state = STRING;
+                }
+                break;
+            }
+
+            case MLSTRING: {
+                if (symb == '"') {
+                    char next_symb = fgetc(scanner->input);
+                    if (next_symb == '"') {
+                        char third_symb = fgetc(scanner->input);
+                        if (third_symb == '"') {
+                            
+                            char* raw_str_val = buffer_to_string(&scanner->buffer);
+                            if (strlen(raw_str_val) == 0) { // Empty multiline string
+                                
+                                free(raw_str_val);
+                                free_buffer(&scanner->buffer);
+
+                                token = create_token(TK_STRING, scanner->line);
+                                token.data.String = strdup(""); 
+                                return token;
+                            }
+                            // Calculate the indentation of the string
+                            char* last_newline = strrchr(raw_str_val, '\n');
+                            int last_line_start = 0;
+                            if (last_newline) {
+                                last_line_start = last_newline - raw_str_val + 1;
+                            }
+
+                            while (raw_str_val[last_line_start] == ' ') {
+                                closing_delimiter_indentation++;
+                                last_line_start++;
+                            }
+            
+                            char* str_val = trim_multiline_string_indentation(raw_str_val, closing_delimiter_indentation);
+                            free(raw_str_val);
+
+                            free_buffer(&scanner->buffer);
+                            token = create_token(TK_STRING, scanner->line);
+                            token.data.String = str_val;
+                            return token;
+                        } else {
+                            // Only two quotes found
+                            append_to_buffer(&scanner->buffer, symb);
+                            append_to_buffer(&scanner->buffer, next_symb);
+                            ungetc(third_symb, scanner->input);
+                        }
+                    } else {
+                        // Only one quote found
+                        append_to_buffer(&scanner->buffer, symb);
+                        ungetc(next_symb, scanner->input);
+                    }
+                } else if (symb == '\\') {
+                    scanner->state = STRING_ESCAPE;
+                } else if (symb == EOF) {
+                    handle_error(LEXICAL_ERROR, scanner->line, "Unexpected end-of-file in multiline string literal");
+                } else if (symb == '\n') {
+                    scanner->line++;
+                    append_to_buffer(&scanner->buffer, symb);
+                } else {
+                    append_to_buffer(&scanner->buffer, symb);
+                }
+                break;
+            }
+
             case STRING: {
                 if (symb == '\\') { 
                     scanner->state = STRING_ESCAPE;
@@ -174,23 +267,23 @@ token_t get_token(scanner_t *scanner) {
                 switch (symb) {
                     case '"': 
                         append_to_buffer(&scanner->buffer, '"');
-                        scanner->state = STRING;
+                        scanner->state = mlstring ? MLSTRING : STRING;
                         break;
                     case 'n': 
                         append_to_buffer(&scanner->buffer, '\n');
-                        scanner->state = STRING;
+                        scanner->state = mlstring ? MLSTRING : STRING;
                         break;
                     case 'r':
                         append_to_buffer(&scanner->buffer, '\r');
-                        scanner->state = STRING;
+                        scanner->state = mlstring ? MLSTRING : STRING;
                         break;
                     case 't': 
                         append_to_buffer(&scanner->buffer, '\t');
-                        scanner->state = STRING;
+                        scanner->state = mlstring ? MLSTRING : STRING;
                         break;
                     case '\\': 
                         append_to_buffer(&scanner->buffer, '\\');
-                        scanner->state = STRING;
+                        scanner->state = mlstring ? MLSTRING : STRING;
                         break;
                     case 'u':
                         scanner->state = STRING_ESCAPE_U;
@@ -225,7 +318,7 @@ token_t get_token(scanner_t *scanner) {
                     }
                     char actual_char = (char)unicode_val;
                     append_to_buffer(&scanner->buffer, actual_char);
-                    scanner->state = STRING; // Succesful \u{dd} parse
+                    scanner->state = mlstring ? MLSTRING : STRING; // Succesful \u{dd} parse
                 } else {
                     handle_error(LEXICAL_ERROR, scanner->line, "Expected '}' or hex digit in \\u{dd} escape sequence");
                 }
@@ -507,6 +600,12 @@ void append_to_buffer(buffer_t *buffer, char ch) {
     buffer->data[buffer->size++] = ch;
 }
 
+void append_string_to_buffer(buffer_t *buffer, const char *str, size_t length) {
+    for (size_t i = 0; i < length; i++) {
+        append_to_buffer(buffer, str[i]);
+    }
+}
+
 char* buffer_to_string(buffer_t *buffer) {
     char *result = (char *)malloc(buffer->size + 1);  // +1 for the null terminator
     if (!result) {
@@ -523,4 +622,44 @@ void free_buffer(buffer_t *buffer) {
     buffer->data = NULL;
     buffer->size = 0;
     buffer->capacity = 0;
+}
+
+char* trim_multiline_string_indentation(const char* raw_str_val, int closing_delimiter_indentation) {
+    buffer_t trimmed_buffer;
+    init_buffer(&trimmed_buffer, 4);
+
+    const char* line_start = raw_str_val;
+    while (*line_start) {
+        // Find the end of the current line
+        const char* line_end = strchr(line_start, '\n');
+        if (!line_end) {
+            line_end = line_start + strlen(line_start); // last line
+        }
+
+        // find indentation
+        int line_indentation = 0;
+        while (line_start + line_indentation < line_end && line_start[line_indentation] == ' ') {
+            line_indentation++;
+        }
+
+        // Find out how much to trim from the current line
+        int trim_amount = (line_indentation < closing_delimiter_indentation) ? line_indentation : closing_delimiter_indentation;
+
+        append_string_to_buffer(&trimmed_buffer, line_start + trim_amount, line_end - (line_start + trim_amount));
+
+        if (*line_end) {
+            append_to_buffer(&trimmed_buffer, '\n');
+            line_start = line_end + 1;
+        } else {
+            line_start = line_end;
+        }
+    }
+
+    char* trimmed_string = buffer_to_string(&trimmed_buffer);
+    size_t length = strlen(trimmed_string);
+    if (length > 0 && trimmed_string[length - 1] == '\n') {
+        trimmed_string[length - 1] = '\0';
+    }
+    free(trimmed_buffer.data);
+    return trimmed_string;
 }

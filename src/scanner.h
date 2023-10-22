@@ -44,6 +44,9 @@ typedef enum {
     IDENTIFIER_TYPE,
 
     /* String states */
+    STRING_TYPE,
+    MLSTRING,
+    MLSTRING_E,
     STRING,
     STRING_ESCAPE,
     STRING_ESCAPE_U,
@@ -139,8 +142,10 @@ token_t get_token(scanner_t *scanner);
 
 void init_buffer(buffer_t *buffer, size_t initial_capacity);
 void append_to_buffer(buffer_t *buffer, char ch);
+void append_string_to_buffer(buffer_t *buffer, const char *str, size_t length);
 char* buffer_to_string(buffer_t *buffer);
 void free_buffer(buffer_t *buffer);
+char* trim_multiline_string_indentation(const char* raw_str_val, int closing_delimiter_indentation);
 
 
 #endif
