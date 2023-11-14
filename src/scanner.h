@@ -17,6 +17,7 @@ authors: xpolia05
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 typedef enum {
     /* Start state */
@@ -76,7 +77,6 @@ typedef enum {
 
     /* Literals */
     TK_IDENTIFIER,    // Identifier
-    TK_IDENTIFIER_OPT,// Type identifier with optional "?" (double?, string?, int?)
     TK_DOUBLE,        // double literal
     TK_INT,           // integer literal
     TK_STRING,        // string literal
@@ -108,7 +108,6 @@ typedef enum {
     TK_UNDERSCORE,    // _
     
     TK_EOF,           // End of file
-    TK_EOL,
     
 } tk_type_t;
 
@@ -121,6 +120,7 @@ typedef struct {
     } data;
     tk_type_t type;
     unsigned int line;
+    bool eol_before;
 } token_t;
 
 typedef struct {
@@ -131,7 +131,7 @@ typedef struct {
 } scanner_t;
 
 token_t get_identifier(char *identifier, unsigned int line);
-token_t create_token(tk_type_t type, unsigned int line);
+token_t create_token(tk_type_t type, unsigned int line, bool eol_before);
 token_t get_token(scanner_t *scanner);
 
 #endif

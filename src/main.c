@@ -60,7 +60,10 @@ int main() {
     do {
         token = get_token(&scanner);
         
-        printf("Token type: %s, Line: %u", token_type_to_string(token.type), token.line);
+        printf("Token type: %s, Line: %u, EOL Before: %d ", 
+       token_type_to_string(token.type), 
+       token.line, 
+       token.eol_before);
         
         switch (token.type) {
             case TK_IDENTIFIER:

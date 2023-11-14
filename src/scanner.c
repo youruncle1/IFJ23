@@ -52,19 +52,21 @@ token_t get_identifier(char *identifier, unsigned int line) {
     return (token_t){.type = TK_IDENTIFIER, .line = line, .data.String = identifier};
 }
 
-token_t create_token(tk_type_t type, unsigned int line) {
-    return (token_t){.type = type, .line = line};
+token_t create_token(tk_type_t type, unsigned int line, bool eol_before) {
+    return (token_t){.type = type, .line = line, .eol_before = eol_before};
 }
 
 token_t get_token(scanner_t *scanner) {
     scanner->state = START;
     token_t token;
+    
     char symb;
     int nested_comment_count = 0;
     int whtespce_count = 0;
     int closing_delimiter_indentation = 0;
     int unicode_val, hex_digits_count;
     bool mlstring = false;
+    bool eol_before = false;
 
     // FSM
     while (1) {
@@ -77,33 +79,33 @@ token_t get_token(scanner_t *scanner) {
                 if (isspace(symb)) {
                     if (symb == '\n') {
                         scanner->line++;
-                        return create_token(TK_EOL, scanner->line-1);
+                        eol_before = true;
                     }
-                    break;
+                    continue;
                 }
 
                 switch(symb) {
                     /* SINGULAR SYMBOL LEXEMS */
                     case EOF:
-                        return create_token(TK_EOF, scanner->line);
+                        return create_token(TK_EOF, scanner->line, eol_before);
                     case '(':
-                        return create_token(TK_LPAR, scanner->line);
+                        return create_token(TK_LPAR, scanner->line, eol_before);
                     case ')':
-                        return create_token(TK_RPAR, scanner->line);
+                        return create_token(TK_RPAR, scanner->line, eol_before);
                     case '{':
-                        return create_token(TK_LBRACE, scanner->line);
+                        return create_token(TK_LBRACE, scanner->line, eol_before);
                     case '}':
-                        return create_token(TK_RBRACE, scanner->line);
+                        return create_token(TK_RBRACE, scanner->line, eol_before);
                     case ':':
-                        return create_token(TK_COLON, scanner->line);
+                        return create_token(TK_COLON, scanner->line, eol_before);
                     case ';':
-                        return create_token(TK_SEMICOLON, scanner->line);
+                        return create_token(TK_SEMICOLON, scanner->line, eol_before);
                     case ',':
-                        return create_token(TK_COMMA, scanner->line);
+                        return create_token(TK_COMMA, scanner->line, eol_before);
                     case '+':
-                        return create_token(TK_PLUS, scanner->line);
+                        return create_token(TK_PLUS, scanner->line, eol_before);
                     case '*':
-                        return create_token(TK_MUL, scanner->line);
+                        return create_token(TK_MUL, scanner->line, eol_before);
                     
                     /* MULTI SYMBOL LEXEMS */
                     case '/':
@@ -166,7 +168,7 @@ token_t get_token(scanner_t *scanner) {
                         ungetc(next_symb, scanner->input); 
                         char* str_val = buffer_to_string(&scanner->buffer); 
                         free_buffer(&scanner->buffer);
-                        token = create_token(TK_STRING, scanner->line);
+                        token = create_token(TK_STRING, scanner->line, eol_before);
                         token.data.String = str_val;
                         return token;
                     }
@@ -191,7 +193,7 @@ token_t get_token(scanner_t *scanner) {
                                 free(raw_str_val);
                                 free_buffer(&scanner->buffer);
 
-                                token = create_token(TK_STRING, scanner->line);
+                                token = create_token(TK_STRING, scanner->line, eol_before);
                                 token.data.String = strdup(""); 
                                 return token;
                             }
@@ -211,7 +213,7 @@ token_t get_token(scanner_t *scanner) {
                             free(raw_str_val);
 
                             free_buffer(&scanner->buffer);
-                            token = create_token(TK_STRING, scanner->line);
+                            token = create_token(TK_STRING, scanner->line, eol_before);
                             token.data.String = str_val;
                             return token;
                         } else {
@@ -244,7 +246,7 @@ token_t get_token(scanner_t *scanner) {
                 } else if (symb == '"') {
                     char* str_val = buffer_to_string(&scanner->buffer);
                     free_buffer(&scanner->buffer);
-                    token = create_token(TK_STRING, scanner->line);
+                    token = create_token(TK_STRING, scanner->line, eol_before);
                     token.data.String = str_val;
                     return token;
                 } else if (symb == '\n' || symb == EOF) {
@@ -340,7 +342,7 @@ token_t get_token(scanner_t *scanner) {
                     unsigned long long int_val = strtoull(num_str, NULL, 10);
                     free(num_str);
                     free_buffer(&scanner->buffer);
-                    token = create_token(TK_INT, scanner->line);
+                    token = create_token(TK_INT, scanner->line, eol_before);
                     token.data.Int = int_val;
                     return token;
                 }
@@ -359,7 +361,7 @@ token_t get_token(scanner_t *scanner) {
                     double double_val = strtod(num_str, NULL);
                     free(num_str);
                     free_buffer(&scanner->buffer);
-                    token = create_token(TK_DOUBLE, scanner->line);
+                    token = create_token(TK_DOUBLE, scanner->line, eol_before);
                     token.data.Double = double_val;
                     return token;
                 }
@@ -398,7 +400,7 @@ token_t get_token(scanner_t *scanner) {
                     double double_val = strtod(num_str, NULL);
                     free(num_str);
                     free_buffer(&scanner->buffer);
-                    token = create_token(TK_DOUBLE, scanner->line);
+                    token = create_token(TK_DOUBLE, scanner->line, eol_before);
                     token.data.Double = double_val;
                     return token;
                 }
@@ -417,7 +419,7 @@ token_t get_token(scanner_t *scanner) {
                     if (strcmp(identifier, "_") == 0) {
                         free(identifier); 
                         free_buffer(&scanner->buffer);
-                        return create_token(TK_UNDERSCORE, scanner->line);
+                        return create_token(TK_UNDERSCORE, scanner->line, eol_before);
                     }
 
                     token_t token = get_identifier(identifier, scanner->line);
@@ -429,6 +431,7 @@ token_t get_token(scanner_t *scanner) {
                     free_buffer(&scanner->buffer);
                     
                     ungetc(symb, scanner->input);  // will iterate once more before returning, stealing next token's symbol
+                    token.eol_before = eol_before;
                     return token;
                 }
                 break;
@@ -438,18 +441,19 @@ token_t get_token(scanner_t *scanner) {
                 ungetc(symb, scanner->input);  // Already got ?, current symbol is from different token
                 char* identifier_str = buffer_to_string(&scanner->buffer);
                 if (strcmp(identifier_str, "Double?") == 0) {
-                    token_t token = create_token(TK_KW_DOUBLE_OPT, scanner->line);
+                    token_t token = create_token(TK_KW_DOUBLE_OPT, scanner->line, eol_before);
                 } else if (strcmp(identifier_str, "Int?") == 0) {
-                    token_t token = create_token(TK_KW_INT_OPT, scanner->line);
+                    token_t token = create_token(TK_KW_INT_OPT, scanner->line, eol_before);
                 } else if (strcmp(identifier_str, "String?") == 0) {
-                    token_t token = create_token(TK_KW_STRING_OPT, scanner->line);
+                    token_t token = create_token(TK_KW_STRING_OPT, scanner->line, eol_before);
                 } else {
                     handle_error(LEXICAL_ERROR, scanner->line, "Unknown optional type, did you mean: Double? / String? / Int?");
                 }
 
                 free(identifier_str);
                 free_buffer(&scanner->buffer);
-            
+
+                token.eol_before = eol_before;
                 return token;
             }
 
@@ -461,7 +465,7 @@ token_t get_token(scanner_t *scanner) {
                     nested_comment_count = 1;
                 } else {                        // Just a division operator '/'
                     ungetc(symb, scanner->input);  
-                    return create_token(TK_DIV, scanner->line);
+                    return create_token(TK_DIV, scanner->line, eol_before);
                 }
                 break;
             }
@@ -472,7 +476,7 @@ token_t get_token(scanner_t *scanner) {
                     if (symb == '\n') {
                         scanner->line++;
                         scanner->state = START;
-                        return create_token(TK_EOL, scanner->line-1);
+                        eol_before = true;
                         break;
                     } 
                 } while (symb != EOF);
@@ -521,53 +525,53 @@ token_t get_token(scanner_t *scanner) {
             case MINUS: {
                 
                 if (symb == '>') {
-                    return create_token(TK_ARROW, scanner->line);  // Arrow ->
+                    return create_token(TK_ARROW, scanner->line, eol_before);  // Arrow ->
                 } else {
                     ungetc(symb, scanner->input);
-                    return create_token(TK_MINUS, scanner->line);  // Just minus -
+                    return create_token(TK_MINUS, scanner->line, eol_before);  // Just minus -
                 }
                 break;
             }
 
             case LT: {
                 if (symb == '=') {  
-                    return create_token(TK_LE, scanner->line);  // Less or equal <=
+                    return create_token(TK_LE, scanner->line, eol_before);  // Less or equal <=
                 } else {
                     ungetc(symb, scanner->input);  
-                    return create_token(TK_LT, scanner->line);  // Just less than <
+                    return create_token(TK_LT, scanner->line, eol_before);  // Just less than <
                 }
             }
 
             case GT: {
                 if (symb == '=') {  
-                    return create_token(TK_GE, scanner->line);  // Greater or equal >=
+                    return create_token(TK_GE, scanner->line, eol_before);  // Greater or equal >=
                 } else {
                     ungetc(symb, scanner->input);  
-                    return create_token(TK_GT, scanner->line);  // Just greater than >
+                    return create_token(TK_GT, scanner->line, eol_before);  // Just greater than >
                 }
             }
 
             case ASSIGN: {
                 if (symb == '=') {  
-                    return create_token(TK_EQ, scanner->line);  // Equal == 
+                    return create_token(TK_EQ, scanner->line, eol_before);  // Equal == 
                 } else {
                     ungetc(symb, scanner->input);  
-                    return create_token(TK_ASSIGN, scanner->line);  // Just assignment =
+                    return create_token(TK_ASSIGN, scanner->line, eol_before);  // Just assignment =
                 }
             }
 
             case UNWRAP: {
                 if (symb == '=') {  
-                    return create_token(TK_NEQ, scanner->line);  // Not equal != 
+                    return create_token(TK_NEQ, scanner->line, eol_before);  // Not equal != 
                 } else {
                     ungetc(symb, scanner->input);  
-                    return create_token(TK_UNWRAP, scanner->line); // Just unwrap !
+                    return create_token(TK_UNWRAP, scanner->line, eol_before); // Just unwrap !
                 }
             }
 
             case COALESCE: {
                 if (symb == '?') {  
-                    return create_token(TK_COALESCE, scanner->line);
+                    return create_token(TK_COALESCE, scanner->line, eol_before);
                 } else {
                     handle_error(LEXICAL_ERROR, scanner->line, "Unexpected character after '?', expected '?'?'");
                 }
