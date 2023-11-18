@@ -22,6 +22,16 @@ TokenArray *initTokenArray() {
     return array;
 }
 
+parser_t initParser(scanner_t *scanner) {
+    parser_t parser = {.scanner = scanner,
+                       .local_frame = initStack(), 
+                       .global_frame = NULL,
+                       .TKAIndex = 0        
+                       };
+
+    return parser;
+}
+
 void addToken(TokenArray *array, token_t token) {
     if (array->size == array->capacity) {
         array->capacity *= 2;
@@ -33,59 +43,113 @@ void addToken(TokenArray *array, token_t token) {
 
 void firstParserPass(parser_t *parser, TokenArray *tokenArray) {
     
-    token_t token = parser->current_token;
-    while ((token = get_token(parser->scanner)).type != TK_EOF) {
-        addToken(tokenArray, token); // Add token to array
-        if (token.type == TK_KW_FUNC) {
+    while ((parser->current_token = get_token(parser->scanner)).type != TK_EOF) {
+        addToken(tokenArray, parser->current_token); // Add token to array
+        if (parser->current_token.type == TK_KW_FUNC) {
             parseFunctionDefinition(parser, tokenArray);
         }
     }
-    addToken(tokenArray, token); // add EOF token to the end of array
+    addToken(tokenArray, parser->current_token); // add EOF token to the end of array
 }
 
 void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray) {
-    // <function_definition> -> func Identifier ( <parameter_list> ) <return_type_opt> ||||| <function_body>
+    // <function_definition> -> func Identifier ( <parameter_list> ) <return_type_opt>
     
     check_next_token_and_add(tokenArray, parser, TK_IDENTIFIER);
     
-    // pridat nazov do stromu
+    parser->global_frame = insertFunc(parser->global_frame, parser->current_token); // insert the function into tree and get updated root
+    parser->current_func = search(parser->global_frame, parser->current_token.data.String); // set the new current function
     
     check_next_token_and_add(tokenArray, parser, TK_LPAR);
 
     parseFunctionParameters(parser, tokenArray);
 
-    check_next_token_and_add(tokenArray, parser, TK_RPAR);
-
-    parser->current_token = get_token(parser->scanner);
-    if(check_token_type(parser, TK_RBRACE)){
-        // <return_type_opt> -> ε 
+    get_next_token(parser);
+    
+    if(check_token_type(parser, TK_LBRACE)){
         //ulozit return type ako NULL
+        InsertReturnType(parser->global_frame, parser->current_func->symbol.key, TK_KW_NIL);
         addToken(tokenArray, parser->current_token);
-    } else if (check_token_type(parser, TK_ARROW)){
-        // <return_type_opt> -> -> <return_type>
+
+    } else if (check_token_type(parser, TK_ARROW)) {
+        
+        // ziskat dalsi token a porovnat ci je token datoveho typu
+        addToken(tokenArray, parser->current_token);  
+        get_next_token(parser);
+
+        if (!is_token_datatype(parser->current_token.type)){
+            handle_error(SYNTAX_ERROR, parser->current_token.line, "SYNTAX ERROR");
+        }
+        
+        InsertReturnType(parser->global_frame, parser->current_func->symbol.key, parser->current_token.type);
+
         addToken(tokenArray, parser->current_token);
-        // ziskat dalsi token porovnat ci je token datoveho typu
-        parser->current_token = get_token(parser->scanner);
-        is_token_datatype(parser->current_token.type);
-        // ulozit return type
 
         
     } else {
         // token nepatri do gramatiky
         handle_error(SYNTAX_ERROR, parser->current_token.line, "SYNTAX ERROR");
     }    
-    
 }
 
 void parseFunctionParameters(parser_t *parser, TokenArray *tokenArray){
-    //             <parameter_list> -> <parameter_definition> <parameter_list_tail>
-    // <parameter_list> -> ε
-    // <parameter_list_tail> -> , <parameter_definition> <parameter_list_tail>
-    // <parameter_list_tail> -> ε
-    // <parameter_definition> -> Identifier : <type>
-    // <parameter_definition> -> _ : <type>  
 
-    // tu pridavat parametre do stromu
+    get_next_token(parser);
+    // Check for empty parameter list
+    if (check_token_type(parser, TK_RPAR)) {
+        addToken(tokenArray, parser->current_token);
+        return;  // No parameters to process
+    }
+
+    while (true) {
+        parseParameter(parser, tokenArray);
+
+        if (check_token_type(parser, TK_COMMA)) {
+            addToken(tokenArray, parser->current_token);  // Add comma to token array
+            get_next_token(parser);  
+        } else {
+            break;
+        }
+    }
+    
+    if (!check_token_type(parser, TK_RPAR)){
+        handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected ')'"); //exits the program
+    }
+    addToken(tokenArray, parser->current_token); // added ')' to tokenarray
+}
+
+void parseParameter(parser_t *parser, TokenArray *tokenArray) {
+
+    if (parser->current_token.type != TK_IDENTIFIER && parser->current_token.type != TK_UNDERSCORE) {
+        handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected parameter name or underscore");
+    }
+    addToken(tokenArray, parser->current_token); 
+
+    char *name = parser->current_token.data.String;
+    
+    get_next_token(parser);
+
+    if (parser->current_token.type != TK_IDENTIFIER && parser->current_token.type != TK_UNDERSCORE) {
+        handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected parameter name or underscore");
+    }
+    addToken(tokenArray, parser->current_token);
+
+    char *id = parser->current_token.data.String;
+    
+
+    check_next_token_and_add(tokenArray, parser, TK_COLON);
+
+    get_next_token(parser);
+    if (!is_token_datatype(parser->current_token.type)) {
+        handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected data type after colon in parameter definition");
+    }
+    addToken(tokenArray, parser->current_token);  
+
+    tk_type_t type = parser->current_token.type;
+    // ADD THIS PARAMETER WITH NAME, ID, AND TOKENTYPE TO THE SYMTABLE
+    InsertParam(parser->global_frame, parser->current_func->symbol.key, name, id, type);
+    // Prepare for next token (either a comma or right parenthesis)
+    get_next_token(parser);  
 }
 
 /* retrieves token from scanner, checks if it matches expected token type, adds it to TokenArray */
@@ -99,24 +163,17 @@ void check_next_token_and_add(TokenArray *tokenArray, parser_t *parser, tk_type_
     addToken(tokenArray, parser->current_token);
 }
 
-parser_t initParser(scanner_t *scanner) {
-    parser_t parser = {.scanner = scanner,
-                       .local_frame = initStack(), 
-                       .global_frame =  NULL,
-                       .TKAIndex = 0         
-                       };
-
-    return parser;
-}
-
-void next_token(parser_t *parser) {
+/* grabs next token from the scanner and saves it to parser */
+void get_next_token(parser_t *parser) {
     parser->current_token = get_token(parser->scanner);
 }
 
-bool check_token_type(parser_t *parser, tk_type_t expected_type) {
-    return parser->current_token.type == expected_type;
+/* returns true if token is the expected type */
+bool check_token_type(parser_t *parser, tk_type_t expectedType) {
+    return parser->current_token.type == expectedType;
 }
 
+/* checks if token type is one of the language's datatype */
 bool is_token_datatype(tk_type_t token) {
     switch (token) {
         case TK_KW_INT:
@@ -131,154 +188,3 @@ bool is_token_datatype(tk_type_t token) {
             return false;
     }
 }
-
-
-void Next_Token_From_Array( parser_t *parser, TokenArray *array )
-{
-    parser->current_token = array->tokens[parser->TKAIndex];
-    parser->TKAIndex++;
-}
-
-bool Check_Token_Type_From_Array( tk_type_t expected_token_type )
-{
-    return parser->current_token.type == expected_token_type;
-}
-
-bool Check_Next_Token_From_Array( tk_type_t expected_token_type, char* err_msg )
-{
-    Next_Token_From_Array( parser_t *parser, char* err_msg );
-    
-    if ( parser->current_token.type == expected_token_type )
-    {
-        return true;
-    }
- 
-    else
-    
-    {
-        handle_error( SYNTAX_ERROR)
-       }
-
-void Program(parser_t *parser) {
-
-}
-
-
-
-void Block_Contents(parser_t *parser) {
-    // <block_contents> -> <block_content> <block_contents>
-    Block_Content(parser);
-    Block_Contents(parser);
-}
-
-void Block_Content(parser_t *parser) {
-    // <block_content> -> var Identifier <type_opt> <def_var>
-    // <block_content> -> let Identifier <type_opt> <def_var>
-    // <block_content> -> <function_definition>
-    // <block_content> -> <function_call>
-    switch (parser->current_token.type) {
-        case TK_KW_VAR:
-        case TK_KW_LET:
-           
-            break;
-        case TK_KW_FUNC:
-            Check_Next_Token_From_Array( parser, TK_IDENTIFIER, "EXPECTED AN IDENTIFIER" );
-            Type_Opt( parser );
-            Def_Var( parser ); 
-            break;
-        case TK_IDENTIFIER:
-}
-  Function_Definition ()pa()pa parser ;
-
-            break;
-        case TK_IDENTIFIER:
-            Function_Call( parser );
-void Def_Var( parser )
-{
-
-}
-
-    void Function_Definition()
-{   /*
-    func Identifier ( <parameter_list> ) <return_type_opt> <function_body>
-    Token: 'func' sa zjedol pred volanim funkcie 
-    */
-
-}
-
-void Type_Opt()
-{
-
-}
-
-void Type()
-{
-
-}
-
-void Return_Type()
-{
-
-}
-
-void Return_Type_Opt()
-{
-
-}
-
-void Parameter_List()
-{
-
-}
-
-void Parameter_List_Tail()
-{   
-
-}
-
-void Parameter_Definition()
-{
-
-
-}
-
-void Def_Value()
-{
-
-}
-
-void Function_Body()
-{
-
-}
-
-void Statement_List()
-{
-
-}
-
-void Statement()
-{
-
-}
-
-void Function_Call()
-{
-
-}
-
-void Input_Parameters()
-{
-
-}
-
-void Input_Parameter_Tail()
-{
-
-}
-
-void Term()
-{
-    
-}
-

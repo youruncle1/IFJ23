@@ -1,4 +1,10 @@
 #include "scanner.h"
+#include "parser.h"
+#include "symtable.h" // Assuming this is the name of your symbol table header file
+
+// Forward declarations
+void printTokenArray(TokenArray *tokenArray);
+void inOrder(Node *node);
 
 const char* token_type_to_string(tk_type_t type) {
     switch (type) {
@@ -49,25 +55,48 @@ const char* token_type_to_string(tk_type_t type) {
 }
 
 int main() {
+    // Initialize scanner
     scanner_t scanner;
-    scanner.input = stdin;      
-    scanner.line = 1;           
+    scanner.input = stdin; // Or a file, if you're reading from a file
+    scanner.line = 1;
 
-    token_t token;
+    // Initialize parser with the scanner
+    parser_t parser = initParser(&scanner);
 
-    do {
-        token = get_token(&scanner);
-        
-        printf("Token type: %s, Line: %u, EOL Before: %d ", 
-       token_type_to_string(token.type), 
-       token.line, 
-       token.eol_before);
-        
+    // Initialize Token Array
+    TokenArray *tokenArray = initTokenArray();
+
+    // Perform first parser pass
+    firstParserPass(&parser, tokenArray);
+
+    // Print the contents of the Token Array
+    printTokenArray(tokenArray);
+
+    // Print the Symbol Table (AVL Tree) using Inorder Traversal
+    printf("\nSymbol Table (Inorder Traversal):\n");
+    inOrder(parser.global_frame);
+
+    // Clean-up (Don't forget to free allocated memory to avoid memory leaks)
+    // ...
+
+    return 0;
+}
+
+void printTokenArray(TokenArray *tokenArray) {
+    printf("Token Array:\n");
+    for (unsigned int i = 0; i < tokenArray->size; i++) {
+        token_t token = tokenArray->tokens[i];
+
+        printf("[%d] Token type: %s, Line: %u, EOL Before: %d", 
+               i, token_type_to_string(token.type), 
+               token.line, 
+               token.eol_before);
+
         switch (token.type) {
             case TK_IDENTIFIER:
             case TK_STRING:
+            case TK_MLSTRING:
                 printf(", Data: %s", token.data.String);
-                free(token.data.String); 
                 break;
             case TK_DOUBLE:
                 printf(", Data: %lf", token.data.Double);
@@ -76,12 +105,18 @@ int main() {
                 printf(", Data: %llu", token.data.Int);
                 break;
             default:
-                break;  
+                break;
         }
 
-        printf("\n");  
+        printf("\n");
+    }
+}
 
-    } while (token.type != TK_EOF);  
-
-    return 0;
+void inOrder(Node *node) {
+    if (node == NULL) {
+        return;
+    }
+    inOrder(node->left);
+    printf("%s \n", node->symbol.key); 
+    inOrder(node->right);
 }

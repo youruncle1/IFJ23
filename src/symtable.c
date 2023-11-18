@@ -11,7 +11,7 @@ SymbolTableStack *initStack(){
 }
 
 /* Funkce pro inicializaci symbolu */
-Symbol *initSymbol(const char *key, int type, bool isLet, bool isFunction, bool isDefined) {
+Symbol *initSymbol(const char *key, tk_type_t type, bool isLet, bool isFunction) {
     
     Symbol *symbol = malloc(sizeof(Symbol));
     if (symbol == NULL) {
@@ -22,7 +22,6 @@ Symbol *initSymbol(const char *key, int type, bool isLet, bool isFunction, bool 
     symbol->type = type;
     symbol->isLet = isLet;
     symbol->isFunction = isFunction;
-    symbol->isDefined = isDefined;  //defined function or defined variable
     symbol->parametersCount = 0;
     symbol->parameters = NULL;
     return symbol;
@@ -51,21 +50,64 @@ bool insertVar(Node *root, Symbol symbol) {
     return true;
 }
 
-Node *insertFunc(Node *root, Symbol symbol, bool definition){
-    Node *found = search(root, symbol.key);
-
-    if (found != NULL && found->symbol.isDefined && definition){
-        handle_error(SEMANTIC_UNDEFINED_FUNCTION, 0, "function redefinition");
-    }
+Node *insertFunc(Node *root, token_t token){
+    Node *found = search(root, token.data.String);
 
     if (found != NULL){
-        if (definition) {
-            found->symbol.isDefined = true;
-        }
-        return found;
+        handle_error(OTHER_SEMANTIC_ERROR, 0, "Function redefinition error");
     }
 
-    return insert(root, symbol);
+    Symbol *symbol = initSymbol(token.data.String, TK_KW_NIL, false, true);
+    return insert(root, *symbol);
+}
+
+void InsertParam(Node *root, const char *funcKey, const char *name, const char *id, tk_type_t type) {
+    Node *funcNode = search(root, funcKey);
+    if (funcNode == NULL || !funcNode->symbol.isFunction) {
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "Desired function not found in symtable");
+        return;
+    }
+
+    // Allocate memory for the new parameter
+    Parameter *parameter = (Parameter *)malloc(sizeof(Parameter));
+    if (parameter == NULL) {
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "FATAL: Memory allocation error");
+        return;
+    }
+
+    // Initialize the parameter
+    parameter->name = strdup(name); // Make sure to duplicate the string
+    parameter->id = strdup(id);     // Make sure to duplicate the string
+    parameter->type = type;
+
+        // Increase the size of the parameters array in the function symbol
+    funcNode->symbol.parametersCount++;
+    funcNode->symbol.parameters = realloc(funcNode->symbol.parameters, funcNode->symbol.parametersCount * sizeof(Parameter));
+    if (funcNode->symbol.parameters == NULL) {
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "FATAL: Memory allocation error");
+        free(parameter->name);
+        free(parameter->id);
+        free(parameter);
+        return;
+    }
+
+    // Add the new parameter to the function's parameter list
+    funcNode->symbol.parameters[funcNode->symbol.parametersCount - 1] = *parameter;
+
+    // The 'parameter' struct has been copied, so its dynamically allocated memory can be freed
+    free(parameter->name);
+    free(parameter->id);
+    free(parameter);
+}
+
+void InsertReturnType(Node *root, const char *funcKey, tk_type_t type){
+    Node *funcNode = search(root, funcKey);
+    if (funcNode == NULL || !funcNode->symbol.isFunction) {
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "Desired function not found in symtable");
+        return;
+    }
+    
+    funcNode->symbol.type = type;
 }
 
 /* Funkce pro vlozeni symbolu do tabulky symbolu */
@@ -110,30 +152,8 @@ Node *insert(Node *root, Symbol symbol) {
     return root;
 }
 
-Node *addParameter(Node *root,char *key,Parameter parameter){
-    Node *func = search(root,key);
-    func->symbol.parametersCount++;
-    func->symbol.parameters = realloc(func->symbol.parameters, func->symbol.parametersCount * sizeof(Parameter));
-    func->symbol.parameters[func->symbol.parametersCount - 1] = parameter;
-    return root;
-}
-
-void checkAllFunctionsDefined(Node* root) {
-    if (root == NULL) {
-        return;
-    }
-
-    checkAllFunctionsDefined(root->left);
-
-    if (root->symbol.isFunction && !root->symbol.isDefined) {
-        handle_error(SEMANTIC_UNDEFINED_FUNCTION, 0, "Function not defined");
-    }
-
-    checkAllFunctionsDefined(root->right);
-}
-
 /* Funkce pro vyhledani symbolu v tabulce symbolu */
-Node* search(Node* root, const char* key) {
+Node *search(Node* root, const char* key) {
     if (root == NULL) {
         return NULL;
     }
@@ -193,14 +213,14 @@ int isEmpty(SymbolTableStack* stack) {
     return (stack->top == NULL);
 }
 
-void inOrder(struct Node* node) {
-    if (node == NULL) {
-        return;
-    }
-    inOrder(node->left);
-    printf("%s ", node->symbol.key);
-    inOrder(node->right);
-}
+// void inOrder(struct Node* node) {
+//     if (node == NULL) {
+//         return;
+//     }
+//     inOrder(node->left);
+//     printf("%s ", node->symbol.key);
+//     inOrder(node->right);
+// }
 
 
 int height(Node *root) {
