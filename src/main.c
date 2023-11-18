@@ -17,7 +17,6 @@ const char* token_type_to_string(tk_type_t type) {
         case TK_KW_VAR: return "TK_KW_VAR";
         case TK_KW_WHILE: return "TK_KW_WHILE";
         case TK_IDENTIFIER: return "TK_IDENTIFIER";
-        case TK_IDENTIFIER_OPT: return "TK_IDENTIFIER_OPT";
         case TK_DOUBLE: return "TK_DOUBLE";
         case TK_INT: return "TK_INT";
         case TK_STRING: return "TK_STRING";
@@ -45,7 +44,6 @@ const char* token_type_to_string(tk_type_t type) {
         case TK_ARROW: return "TK_ARROW";
         case TK_UNDERSCORE: return "TK_UNDERSCORE";
         case TK_EOF: return "TK_EOF";
-        case TK_EOL: return "TK_EOL";
         default: return "UNKNOWN_TOKEN_TYPE";
     }
 }
@@ -67,7 +65,6 @@ int main() {
         
         switch (token.type) {
             case TK_IDENTIFIER:
-            case TK_IDENTIFIER_OPT:
             case TK_STRING:
                 printf(", Data: %s", token.data.String);
                 free(token.data.String); 

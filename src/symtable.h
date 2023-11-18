@@ -2,25 +2,37 @@
 #include<malloc.h>
 #include <stdbool.h>
 #include <string.h>
-#define INT_TYPE 1
-#define DOUBLE_TYPE 2
-#define STRING_TYPE 3
+#include "error.h"
 
-typedef struct Stack Stack;
+#define max(a,b) ((a) > (b) ? (a) : (b))
+
+typedef enum {
+    INT_TYPE,
+    DOUBLE_TYPE,
+    STRING_TYPE,
+    INT_TYPE_NIL, 
+    DOUBLE_TYPE_NIL, 
+    STRING_TYPE_NIL,
+    UNKNWN_TYPE
+} dataType;
 
 typedef struct Parameter{
     char *name;
     char *id;
-    int type;
-}Parameter;
+    dataType type;
+} Parameter;
 
 typedef struct Symbol{
     char key[50];
-    int type;
-    bool isFunction;
-    Stack *localFrame;
-    Parameter *parameters;
+    
+    dataType type;
+    
+    bool isLet; //holds info if a variable can be modified
+    
+    bool isFunction; //says whether symbol is a function or variable
+    bool isDefined;
     int parametersCount;
+    Parameter *parameters;
 } Symbol;
 
 typedef struct Node{
@@ -30,30 +42,32 @@ typedef struct Node{
     int height;
 } Node;
 
-typedef struct Stack{
-    Node *treeNode;
-    struct Stack *next;
-} Stack;
+typedef struct StackNode{
+    Node *symbolTable;
+    struct StackNode *next;
+} StackNode;
 
-Stack *StackInit(Stack *stack);
-Stack *push(Stack* stack, Node* treeNode);
+typedef struct {
+    StackNode *top;
+} SymbolTableStack;
+
+/* STACK funcs */
+SymbolTableStack *initStack();
+void push(SymbolTableStack *stack, Node *treeNode);
+void pop(SymbolTableStack* stack);
+int isEmpty(SymbolTableStack *stack);
+Node* stackSearch(SymbolTableStack* stack, const char* key);
+
+/* AVLTree funcs */
+Symbol *initSymbol(const char *key, dataType type, bool isFunction);
 Node *newNode(Symbol symbol);
 Node *insert(Node *root, Symbol symbol);
+Node *addParameter(Node *root,char *key,Parameter parameter);
 Node* search(Node* root, const char* key);
-int isEmpty(Stack *stack);
-Node* pop(Stack** stack);
-Node *newLocalSTable(Node *root,char *key);
-Node *insert2Local(Node *root,Symbol symbol);
-Node *deleteLocalSTable(Node *root);
-Node *searchLocal(Node *root,char *key);
-Node *searchSymbol(Node *root,Node *local,char *key);
 void inOrder(struct Node* node);
-int max(int a, int b);
 int height(Node *root);
 int getBalance(Node* root);
 Node *rightRotate(Node *root);
 Node *leftRotate(Node *root);
-Node *addParameter(Node *root,char *key,Parameter parameter);
-Symbol *initSymbol(const char *key, int type, bool isFunction);
 void freeTable(Node *root);
 

@@ -18,7 +18,7 @@ authors: xpolia05
 void init_buffer(buffer_t *buffer, size_t initial_capacity) {
     buffer->data = (char *)malloc(initial_capacity);
     if (!buffer->data) {
-        handle_error(INTERNAL_COMPILER_ERROR, 0, "Memory allocation error!");
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "FATAL: Memory allocation error");
     }
     buffer->size = 0;
     buffer->capacity = initial_capacity;
@@ -30,7 +30,7 @@ void append_to_buffer(buffer_t *buffer, char ch) {
         char *new_data = (char *)realloc(buffer->data, new_capacity);
         if (!new_data) {
             free(buffer->data);
-            handle_error(INTERNAL_COMPILER_ERROR, 0, "Memory allocation error!");
+            handle_error(INTERNAL_COMPILER_ERROR, 0, "FATAL: Memory allocation error");
         }
         buffer->data = new_data;
         buffer->capacity = new_capacity;
@@ -47,7 +47,7 @@ void append_string_to_buffer(buffer_t *buffer, const char *str, size_t length) {
 char* buffer_to_string(buffer_t *buffer) {
     char *result = (char *)malloc(buffer->size + 1);  // +1 for the null terminator
     if (!result) {
-        handle_error(INTERNAL_COMPILER_ERROR, 0, "Memory allocation error!");
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "FATAL: Memory allocation error");
     }
 
     memcpy(result, buffer->data, buffer->size);
