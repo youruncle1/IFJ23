@@ -55,29 +55,21 @@ const char* token_type_to_string(tk_type_t type) {
 }
 
 int main() {
-    // Initialize scanner
     scanner_t scanner;
-    scanner.input = stdin; // Or a file, if you're reading from a file
+    scanner.input = stdin; 
     scanner.line = 1;
 
-    // Initialize parser with the scanner
     parser_t parser = initParser(&scanner);
 
-    // Initialize Token Array
     TokenArray *tokenArray = initTokenArray();
 
-    // Perform first parser pass
     firstParserPass(&parser, tokenArray);
 
-    // Print the contents of the Token Array
     printTokenArray(tokenArray);
 
-    // Print the Symbol Table (AVL Tree) using Inorder Traversal
     printf("\nSymbol Table (Inorder Traversal):\n");
     inOrder(parser.global_frame);
 
-    // Clean-up (Don't forget to free allocated memory to avoid memory leaks)
-    // ...
 
     return 0;
 }
@@ -117,6 +109,26 @@ void inOrder(Node *node) {
         return;
     }
     inOrder(node->left);
-    printf("%s \n", node->symbol.key); 
+
+    // Print the symbol key (function name or variable name)
+    printf("%s", node->symbol.key);
+
+    // If the symbol is a function, print its parameters
+    if (node->symbol.isFunction) {
+        printf(" (%s Function) Parameters: ", token_type_to_string(node->symbol.type));
+        for (int i = 0; i < node->symbol.parametersCount; i++) {
+            printf("[Name: %s, ID: %s, Type: %s]", 
+                   node->symbol.parameters[i].name, 
+                   node->symbol.parameters[i].id, 
+                   token_type_to_string(node->symbol.parameters[i].type));
+            if (i < node->symbol.parametersCount - 1) {
+                printf(", ");
+            }
+        }
+        printf("\n");
+    } else {
+        printf(" (Variable)\n");
+    }
+
     inOrder(node->right);
 }

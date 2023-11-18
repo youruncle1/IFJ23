@@ -68,7 +68,6 @@ void InsertParam(Node *root, const char *funcKey, const char *name, const char *
         return;
     }
 
-    // Allocate memory for the new parameter
     Parameter *parameter = (Parameter *)malloc(sizeof(Parameter));
     if (parameter == NULL) {
         handle_error(INTERNAL_COMPILER_ERROR, 0, "FATAL: Memory allocation error");
@@ -76,11 +75,11 @@ void InsertParam(Node *root, const char *funcKey, const char *name, const char *
     }
 
     // Initialize the parameter
-    parameter->name = strdup(name); // Make sure to duplicate the string
-    parameter->id = strdup(id);     // Make sure to duplicate the string
+    parameter->name = strdup(name); 
+    parameter->id = strdup(id);     
     parameter->type = type;
 
-        // Increase the size of the parameters array in the function symbol
+    // Increase the size of the parameters array in the function symbol
     funcNode->symbol.parametersCount++;
     funcNode->symbol.parameters = realloc(funcNode->symbol.parameters, funcNode->symbol.parametersCount * sizeof(Parameter));
     if (funcNode->symbol.parameters == NULL) {
@@ -94,10 +93,6 @@ void InsertParam(Node *root, const char *funcKey, const char *name, const char *
     // Add the new parameter to the function's parameter list
     funcNode->symbol.parameters[funcNode->symbol.parametersCount - 1] = *parameter;
 
-    // The 'parameter' struct has been copied, so its dynamically allocated memory can be freed
-    free(parameter->name);
-    free(parameter->id);
-    free(parameter);
 }
 
 void InsertReturnType(Node *root, const char *funcKey, tk_type_t type){
@@ -188,10 +183,8 @@ void pop(SymbolTableStack* stack) {
     StackNode* topNode = stack->top;
     stack->top = topNode->next;
 
-    // Free the symbol table associated with the top node.
     freeTable(topNode->symbolTable);
 
-    // Free the top node itself.
     free(topNode);
 }
 
