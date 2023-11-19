@@ -68,7 +68,7 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray) {
     
     if(check_token_type(parser, TK_LBRACE)){
         //ulozit return type ako NULL
-        InsertReturnType(parser->global_frame, parser->current_func->symbol.key, TK_KW_NIL);
+        InsertType(parser->global_frame, parser->current_func->symbol.key, TK_KW_NIL);
         addToken(tokenArray, parser->current_token);
 
     } else if (check_token_type(parser, TK_ARROW)) {
@@ -81,7 +81,7 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray) {
             handle_error(SYNTAX_ERROR, parser->current_token.line, "SYNTAX ERROR");
         }
         
-        InsertReturnType(parser->global_frame, parser->current_func->symbol.key, parser->current_token.type);
+        InsertType(parser->global_frame, parser->current_func->symbol.key, parser->current_token.type);
 
         addToken(tokenArray, parser->current_token);
 

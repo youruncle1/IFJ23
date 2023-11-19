@@ -11,7 +11,7 @@ SymbolTableStack *initStack(){
 }
 
 /* Funkce pro inicializaci symbolu */
-Symbol *initSymbol(const char *key, tk_type_t type, bool isLet, bool isFunction) {
+Symbol *initSymbol(const char *key, tk_type_t type, bool isLet, bool isInit, bool isFunction) {
     
     Symbol *symbol = malloc(sizeof(Symbol));
     if (symbol == NULL) {
@@ -21,6 +21,7 @@ Symbol *initSymbol(const char *key, tk_type_t type, bool isLet, bool isFunction)
     strcpy(symbol->key, key);
     symbol->type = type;
     symbol->isLet = isLet;
+    symbol->isInit = isInit;
     symbol->isFunction = isFunction;
     symbol->parametersCount = 0;
     symbol->parameters = NULL;
@@ -41,13 +42,13 @@ Node *newNode(Symbol symbol) {
     return newNode;
 }
 
-bool insertVar(Node *root, Symbol symbol) {
-    if (search(root, symbol.key) != NULL){
+Node *insertVar(Node *root, token_t token, bool isLet, bool isInit) {
+    if (search(root, token.data.String) != NULL){
         handle_error(SEMANTIC_UNDEFINED_FUNCTION, 0, "variable redefinition");
     }
 
-    insert(root, symbol);
-    return true;
+    Symbol *symbol = initSymbol(token.data.String, TK_KW_NIL, isLet, isInit, false);
+    return insert(root, *symbol);
 }
 
 Node *insertFunc(Node *root, token_t token){
@@ -57,7 +58,7 @@ Node *insertFunc(Node *root, token_t token){
         handle_error(OTHER_SEMANTIC_ERROR, 0, "Function redefinition error");
     }
 
-    Symbol *symbol = initSymbol(token.data.String, TK_KW_NIL, false, true);
+    Symbol *symbol = initSymbol(token.data.String, TK_KW_NIL, false, false, true); // initialize with NIL(return type yet unknown)
     return insert(root, *symbol);
 }
 
@@ -74,19 +75,16 @@ void InsertParam(Node *root, const char *funcKey, const char *name, const char *
         return;
     }
 
-    // Initialize the parameter
+    // Parameter init
     parameter->name = strdup(name); 
     parameter->id = strdup(id);     
     parameter->type = type;
 
-    // Increase the size of the parameters array in the function symbol
+    // Resize parameter list
     funcNode->symbol.parametersCount++;
     funcNode->symbol.parameters = realloc(funcNode->symbol.parameters, funcNode->symbol.parametersCount * sizeof(Parameter));
     if (funcNode->symbol.parameters == NULL) {
         handle_error(INTERNAL_COMPILER_ERROR, 0, "FATAL: Memory allocation error");
-        free(parameter->name);
-        free(parameter->id);
-        free(parameter);
         return;
     }
 
@@ -95,9 +93,10 @@ void InsertParam(Node *root, const char *funcKey, const char *name, const char *
 
 }
 
-void InsertReturnType(Node *root, const char *funcKey, tk_type_t type){
-    Node *funcNode = search(root, funcKey);
-    if (funcNode == NULL || !funcNode->symbol.isFunction) {
+/* CAN BE USED FOR VARIABLES TOO! function inserts either type of variable or return type of function */
+void InsertType(Node *root, const char *key, tk_type_t type){
+    Node *funcNode = search(root, key);
+    if (funcNode == NULL) {
         handle_error(INTERNAL_COMPILER_ERROR, 0, "Desired function not found in symtable");
         return;
     }
@@ -279,51 +278,51 @@ void freeTable(Node *root){
 void define_builtin_functions(Node **root) {
 
     // func readString() -> String?
-    Symbol readString = *initSymbol("readString", TK_KW_STRING_OPT, false, true);
+    Symbol readString = *initSymbol("readString", TK_KW_STRING_OPT, false, false, true);
     *root = insert(*root, readString);
 
     // func readInt() -> Int?
-    Symbol readInt = *initSymbol("readInt", TK_KW_INT_OPT, false, true);
+    Symbol readInt = *initSymbol("readInt", TK_KW_INT_OPT, false, false, true);
     *root = insert(*root, readInt);
 
     // func readDouble() -> Double?
-    Symbol readDouble = *initSymbol("readDouble", TK_KW_DOUBLE_OPT, false, true);
+    Symbol readDouble = *initSymbol("readDouble", TK_KW_DOUBLE_OPT, false, false, true);
     *root = insert(*root, readDouble);
 
     // func write(term1, term2, ..., termN)
-    Symbol write = *initSymbol("write", TK_KW_NIL, false, true);
+    Symbol write = *initSymbol("write", TK_KW_NIL, false, false, true);
     *root = insert(*root, write);
     // !!!! The parameters of 'write' function are variable. 
 
      // Int2Double(_ term: Int) -> Double
-    Symbol int2Double = *initSymbol("Int2Double", TK_KW_DOUBLE, false, true);
+    Symbol int2Double = *initSymbol("Int2Double", TK_KW_DOUBLE, false, false, true);
     *root = insert(*root, int2Double);
     InsertParam(*root, "Int2Double", "_", "term", TK_KW_INT);
 
     // Double2Int(_ term: Double) -> Int
-    Symbol double2Int = *initSymbol("Double2Int", TK_KW_INT, false, true);
+    Symbol double2Int = *initSymbol("Double2Int", TK_KW_INT, false, false, true);
     *root = insert(*root, double2Int);
     InsertParam(*root, "Double2Int", "_", "term", TK_KW_DOUBLE);
 
     // length(_ s: String) -> Int
-    Symbol length = *initSymbol("length", TK_KW_INT, false, true);
+    Symbol length = *initSymbol("length", TK_KW_INT, false, false, true);
     *root = insert(*root, length);
     InsertParam(*root, "length", "_", "s", TK_KW_STRING);
 
     // substring(of s: String, startingAt i: Int, endingBefore j: Int) -> String?
-    Symbol substring = *initSymbol("substring", TK_KW_STRING_OPT, false, true);
+    Symbol substring = *initSymbol("substring", TK_KW_STRING_OPT, false, false, true);
     *root = insert(*root, substring);
     InsertParam(*root, "substring", "of", "s", TK_KW_STRING);
     InsertParam(*root, "substring", "startingAt", "i", TK_KW_INT);
     InsertParam(*root, "substring", "endingBefore", "j", TK_KW_INT);
 
     // ord(_ c: String) -> Int
-    Symbol ord = *initSymbol("ord", TK_KW_INT, false, true);
+    Symbol ord = *initSymbol("ord", TK_KW_INT, false, false, true);
     *root = insert(*root, ord);
     InsertParam(*root, "ord", "_", "c", TK_KW_STRING);
 
     // chr(_ i: Int) -> String
-    Symbol chr = *initSymbol("chr", TK_KW_STRING, false, true);
+    Symbol chr = *initSymbol("chr", TK_KW_STRING, false, false, true);
     *root = insert(*root, chr);
     InsertParam(*root, "chr", "_", "i", TK_KW_INT);
 

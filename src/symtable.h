@@ -22,6 +22,7 @@ typedef struct Symbol{
     tk_type_t type;
     
     bool isLet; //holds info if a variable can be modified
+    bool isInit; //holds info if a variable has been initialized
     
     bool isFunction; //says whether symbol is a function or variable
     int parametersCount;
@@ -52,13 +53,13 @@ int isEmpty(SymbolTableStack *stack);
 Node *stackSearch(SymbolTableStack* stack, const char* key);
 
 /* AVLTree funcs */
-Symbol *initSymbol(const char *key, tk_type_t type, bool isLet, bool isFunction);
+Symbol *initSymbol(const char *key, tk_type_t type, bool isLet, bool isInit, bool isFunction);
 Node *newNode(Symbol symbol);
 Node *insert(Node *root, Symbol symbol);
 Node *insertFunc(Node *root, token_t token);
 void InsertParam(Node *root, const char *funcKey, const char *name, const char *id, tk_type_t type);
-void InsertReturnType(Node *root, const char *funcKey, tk_type_t type);
-bool insertVar(Node *root, Symbol symbol);
+void InsertType(Node *root, const char *key, tk_type_t type);
+Node *insertVar(Node *root, token_t token, bool isLet, bool isInit);
 Node *search(Node* root, const char* key);
 //void inOrder(struct Node* node);
 int height(Node *root);
