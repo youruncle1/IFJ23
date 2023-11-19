@@ -276,3 +276,55 @@ void freeTable(Node *root){
     free(root);
 }
 
+void define_builtin_functions(Node **root) {
+
+    // func readString() -> String?
+    Symbol readString = *initSymbol("readString", TK_KW_STRING_OPT, false, true);
+    *root = insert(*root, readString);
+
+    // func readInt() -> Int?
+    Symbol readInt = *initSymbol("readInt", TK_KW_INT_OPT, false, true);
+    *root = insert(*root, readInt);
+
+    // func readDouble() -> Double?
+    Symbol readDouble = *initSymbol("readDouble", TK_KW_DOUBLE_OPT, false, true);
+    *root = insert(*root, readDouble);
+
+    // func write(term1, term2, ..., termN)
+    Symbol write = *initSymbol("write", TK_KW_NIL, false, true);
+    *root = insert(*root, write);
+    // !!!! The parameters of 'write' function are variable. 
+
+     // Int2Double(_ term: Int) -> Double
+    Symbol int2Double = *initSymbol("Int2Double", TK_KW_DOUBLE, false, true);
+    *root = insert(*root, int2Double);
+    InsertParam(*root, "Int2Double", "_", "term", TK_KW_INT);
+
+    // Double2Int(_ term: Double) -> Int
+    Symbol double2Int = *initSymbol("Double2Int", TK_KW_INT, false, true);
+    *root = insert(*root, double2Int);
+    InsertParam(*root, "Double2Int", "_", "term", TK_KW_DOUBLE);
+
+    // length(_ s: String) -> Int
+    Symbol length = *initSymbol("length", TK_KW_INT, false, true);
+    *root = insert(*root, length);
+    InsertParam(*root, "length", "_", "s", TK_KW_STRING);
+
+    // substring(of s: String, startingAt i: Int, endingBefore j: Int) -> String?
+    Symbol substring = *initSymbol("substring", TK_KW_STRING_OPT, false, true);
+    *root = insert(*root, substring);
+    InsertParam(*root, "substring", "of", "s", TK_KW_STRING);
+    InsertParam(*root, "substring", "startingAt", "i", TK_KW_INT);
+    InsertParam(*root, "substring", "endingBefore", "j", TK_KW_INT);
+
+    // ord(_ c: String) -> Int
+    Symbol ord = *initSymbol("ord", TK_KW_INT, false, true);
+    *root = insert(*root, ord);
+    InsertParam(*root, "ord", "_", "c", TK_KW_STRING);
+
+    // chr(_ i: Int) -> String
+    Symbol chr = *initSymbol("chr", TK_KW_STRING, false, true);
+    *root = insert(*root, chr);
+    InsertParam(*root, "chr", "_", "i", TK_KW_INT);
+
+}

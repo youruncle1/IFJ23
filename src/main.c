@@ -61,6 +61,8 @@ int main() {
 
     parser_t parser = initParser(&scanner);
 
+    define_builtin_functions(&parser.global_frame);
+
     TokenArray *tokenArray = initTokenArray();
 
     firstParserPass(&parser, tokenArray);
@@ -111,11 +113,11 @@ void inOrder(Node *node) {
     inOrder(node->left);
 
     // Print the symbol key (function name or variable name)
-    printf("%s", node->symbol.key);
+    printf("\n%s", node->symbol.key);
 
     // If the symbol is a function, print its parameters
     if (node->symbol.isFunction) {
-        printf(" (%s Function) Parameters: ", token_type_to_string(node->symbol.type));
+        printf(" ->  %s\n\t Parameters: ", token_type_to_string(node->symbol.type));
         for (int i = 0; i < node->symbol.parametersCount; i++) {
             printf("[Name: %s, ID: %s, Type: %s]", 
                    node->symbol.parameters[i].name, 

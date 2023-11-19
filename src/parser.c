@@ -125,8 +125,13 @@ void parseParameter(parser_t *parser, TokenArray *tokenArray) {
     }
     addToken(tokenArray, parser->current_token); 
 
-    char *name = parser->current_token.data.String;
-    
+    char *name;
+    if(parser->current_token.type == TK_UNDERSCORE){
+        name = "_";
+    } else {
+        name = parser->current_token.data.String;
+    }
+        
     get_next_token(parser);
 
     if (parser->current_token.type != TK_IDENTIFIER && parser->current_token.type != TK_UNDERSCORE) {
@@ -134,7 +139,12 @@ void parseParameter(parser_t *parser, TokenArray *tokenArray) {
     }
     addToken(tokenArray, parser->current_token);
 
-    char *id = parser->current_token.data.String;
+    char *id;
+    if(parser->current_token.type == TK_UNDERSCORE){
+        id = "_";
+    } else {
+        id = parser->current_token.data.String;
+    }
     
 
     check_next_token_and_add(tokenArray, parser, TK_COLON);

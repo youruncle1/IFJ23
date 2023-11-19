@@ -60,11 +60,12 @@ void InsertParam(Node *root, const char *funcKey, const char *name, const char *
 void InsertReturnType(Node *root, const char *funcKey, tk_type_t type);
 bool insertVar(Node *root, Symbol symbol);
 Node *search(Node* root, const char* key);
-void inOrder(struct Node* node);
+//void inOrder(struct Node* node);
 int height(Node *root);
 int getBalance(Node* root);
 Node *rightRotate(Node *root);
 Node *leftRotate(Node *root);
 void freeTable(Node *root);
+void define_builtin_functions(Node **root);
 
 #endif
