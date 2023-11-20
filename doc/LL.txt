@@ -1,48 +1,64 @@
-1. <program> -> <block_contents>
-2. <block_contents> -> <block_content> <block_contents>
-3. <block_contents> -> ε
-4. <block_content> -> var Identifier <type_opt> <def_var>
-5. <block_content> -> let Identifier <type_opt> <def_var>
-6. <block_content> -> <function_definition>
-7. <block_content> -> ε
-8. <type_opt> -> : <type>
-9. <type_opt> -> ε
-10. <def_var> -> = <def_value>
-11. <def_var> -> ε
-12. <def_value> -> <expression>
-13. <def_value> -> <function_call>
-14. <def_value> -> ε
-15. <type> -> int
-16. <type> -> double
-17. <type> -> string
-18. <type> -> void
-19. <function_definition> -> func Identifier ( <parameter_list> ) <return_type_opt> <function_body>
-20. <parameter_list> -> <parameter_definition> <parameter_list_tail>
-21. <parameter_list> -> ε
-22. <parameter_list_tail> -> , <parameter_definition> <parameter_list_tail>
-23. <parameter_list_tail> -> ε
-24. <parameter_definition> -> Identifier : <type>
-25. <parameter_definition> -> _ : <type>
-26. <return_type> -> <type>
-27. <return_type_opt> -> -> <return_type>
-28. <return_type_opt> -> ε
-29. <function_body> -> { <statement_list> }
-30. <statement_list> -> <statement> <statement_list>
-31. <statement_list> -> ε
-32. <statement> -> if <expression> { <statement_list> } else { <statement_list> }
-33. <statement> -> if let Identifier { <statement_list> } else { <statement_list> }
-34. <statement> -> while <expression> { <statement_list> }
-35. <statement> -> Identifier = <function_call>
-36. <statement> -> return <expression> ?? <statement_return>
-37. <statement> -> var Identifier <type_opt> <def_var>
-38. <statement> -> let Identifier <type_opt> <def_var>
-39. <statement_return> -> return <expression>
-40. <statement_return> -> return
-41. <statement_return> -> ε
-42. <function_call> -> Identifier ( <input_parameters> )
-43. <input_parameters> -> <term> <input_parameters_tail>
-44. <input_parameters_tail> -> , <term> <input_parameters_tail>
-45. <input_parameters_tail> -> ε
-46. <term> -> Identifier
-47. <term> -> <expression>
-48. <term> -> ε
+<program> -> <block_contents>
+
+<block_contents> -> <block_content> <block_contents>
+<block_contents> -> ε
+
+<block_content> -> var Identifier <type_opt> <def_var>
+<block_content> -> let Identifier <type_opt> <def_var>
+<block_content> -> <function_definition>
+<block_content> -> <function_call>
+<block_content> -> ε
+
+<type_opt> -> : <type>
+<type_opt> -> ε
+
+<def_var> -> = <def_value>
+<def_var> -> ε
+
+<def_value> -> <expression>
+<def_value> -> <function_call>
+<def_value> -> ε
+
+<type> -> Int |  Double | String | Int? | Double? | String?
+
+<function_definition> -> func Identifier ( <parameter_list> ) <return_type_opt> <function_body>
+
+<parameter_list> -> <parameter_definition> <parameter_list_tail>
+<parameter_list> -> ε
+
+<parameter_list_tail> -> , <parameter_definition> <parameter_list_tail>
+<parameter_list_tail> -> ε
+
+<parameter_definition> -> Identifier : <type>
+<parameter_definition> -> _ : <type>
+
+<return_type> -> <type>
+
+<return_type_opt> -> -> <return_type>
+<return_type_opt> -> ε
+
+<function_body> -> { <statement_list> }
+
+<statement_list> -> <statement> <statement_list>
+<statement_list> -> ε
+<statement> -> if <expression> { <statement_list> } else { <statement_list> }
+<statement> -> if let Identifier { <statement_list> } else { <statement_list> }
+<statement> -> while <expression> { <statement_list> }
+<statement> -> Identifier = <function_call>
+<statement> -> return <expression> ?? <statement_return>
+<statement> -> var Identifier <type_opt> <def_var>
+<statement> -> let Identifier <type_opt> <def_var>
+<statement_return> -> return <expression>
+<statement_return> -> return
+<statement_return> -> ε
+
+<function_call> -> Identifier ( <input_parameters> )
+
+<input_parameters> -> <term> <input_parameters_tail>
+
+<input_parameters_tail> -> , <term> <input_parameters_tail>
+<input_parameters_tail> -> ε
+
+<term> -> Identifier
+<term> -> <expression>
+<term> -> ε
