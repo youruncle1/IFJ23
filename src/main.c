@@ -72,6 +72,7 @@ int main() {
     printf("\nSymbol Table (Inorder Traversal):\n");
     inOrder(parser.global_frame);
 
+    parseProgram(&parser,tokenArray);
 
     return 0;
 }
