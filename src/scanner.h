@@ -59,6 +59,31 @@ typedef enum {
 
 
 typedef enum {
+
+    TK_UNWRAP,        // !  force unwraps a value, asserting that it is NOT 'nil'(see ^ and assignment: 5.1 Aritmeticke, retezcove...)
+    TK_MUL,           // *
+    TK_DIV,           // /
+    TK_PLUS,          // +
+    TK_MINUS,         // -
+    TK_LT,            // <
+    TK_LE,            // <=
+    TK_GT,            // >
+    TK_GE,            // >=
+    TK_EQ,            // ==
+    TK_NEQ,           // !=
+    TK_COALESCE,      // ?? https://docs.swift.org/swift-book/documentation/the-swift-programming-language/basicoperators/#Nil-Coalescing-Operator
+    TK_LPAR,          // (
+    TK_RPAR,          // )
+
+    /* Literals */
+    TK_IDENTIFIER,    // Identifier
+    TK_DOUBLE,        // double literal
+    TK_INT,           // integer literal
+    TK_STRING,        // string literal
+    TK_MLSTRING,      // multi-line string literal
+
+    TK_DOLLAR,        // $ For expression 
+
     /* Keywords */
     TK_KW_DOUBLE,
     TK_KW_DOUBLE_OPT,
@@ -75,30 +100,10 @@ typedef enum {
     TK_KW_VAR,
     TK_KW_WHILE,
 
-    /* Literals */
-    TK_IDENTIFIER,    // Identifier
-    TK_DOUBLE,        // double literal
-    TK_INT,           // integer literal
-    TK_STRING,        // string literal
-    TK_MLSTRING,      // multi-line string literal
     
-    /* Operators */
-    TK_PLUS,          // +
-    TK_MINUS,         // -
-    TK_MUL,           // *
-    TK_DIV,           // /
-    TK_COALESCE,      // ?? https://docs.swift.org/swift-book/documentation/the-swift-programming-language/basicoperators/#Nil-Coalescing-Operator
-    TK_UNWRAP,        // !  force unwraps a value, asserting that it is NOT 'nil'(see ^ and assignment: 5.1 Aritmeticke, retezcove...)
+    
     TK_ASSIGN,        // =
-    TK_EQ,            // ==
-    TK_NEQ,           // !=
-    TK_LT,            // <
-    TK_GT,            // >
-    TK_LE,            // <=
-    TK_GE,            // >=
     /* Punctation */
-    TK_LPAR,          // (
-    TK_RPAR,          // )
     TK_COMMA,         // ,
     TK_COLON,         // :
     TK_SEMICOLON,     // ;
@@ -106,8 +111,13 @@ typedef enum {
     TK_RBRACE,        // }
     TK_ARROW,         // ->
     TK_UNDERSCORE,    // _
-    
+
+    /* Expression*/
+    TK_LEFT,          // <
+    TK_RIGHT,         // >
+
     TK_EOF,           // End of file
+
     
 } tk_type_t;
 
@@ -116,7 +126,7 @@ typedef struct {
         // https://learn.microsoft.com/cs-cz/cpp/cpp/data-type-ranges?view=msvc-170
         double Double;          //double literals
         unsigned long long Int; //integer literals
-        char* String;           //identifiers, string literals, keywords, ?operators?
+        char* String;           //identifiers, string literals, keywords
     } data;
     tk_type_t type;
     unsigned int line;
