@@ -3,11 +3,17 @@
 #include <stdbool.h>
 #include "scanner.h"
 #include "instructions.h"
+#include "parser.h"
+// #include "expressions.h"        //Tu bude includovany expression parser ktory bude mat ASS
 
 
 typedef struct{
     instructionTape_t mainBody;
     instructionTape_t header;
+    instructionTape_t functions;
+    instructionTape_t functionHead;
+    instructionTape_t functionBody;
+    instructionTape_t functionFoot;
 }generator_t;
 
 generator_t gen_Init();
