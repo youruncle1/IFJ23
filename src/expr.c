@@ -89,8 +89,16 @@ bool stack_isempty(Stack *stack) {
 }
 
 int performSemanticCheck(ASTNode* node,parser_t *parser) {
-    tk_type_t leftType = node->left->type;
-    tk_type_t rightType = node->right->type;
+    tk_type_t leftType;
+    tk_type_t rightType;
+    if (node->left->token.type >= TK_UNWRAP && node->left->token.type <= TK_COALESCE)
+        leftType = node->left->resultType;
+    else
+        leftType = node->left->type;
+    if (node->right->token.type >= TK_UNWRAP && node->right->token.type <= TK_COALESCE)
+        rightType = node->left->resultType;
+    else
+        rightType = node->right->type;
 
     if (node->left->type == TK_IDENTIFIER)
     {
@@ -106,44 +114,6 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
     if (leftType != rightType) {
         handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
         return 0;
-    }
-
-    switch (node->token.type) {
-        case TK_PLUS:
-        case TK_MINUS:
-        case TK_MUL:
-        case TK_DIV:
-            if ((leftType == TK_DOUBLE || leftType == TK_INT) &&
-                (rightType == TK_DOUBLE || rightType == TK_INT)) {
-                return 0;
-            } else {
-                handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
-            }
-            break;
-        case '==':
-        case '!=':
-            break;
-        case '<':
-        case '>':
-        case '<=':
-        case '>=':
-             if ((leftType == TK_DOUBLE || leftType == TK_INT) &&
-                (rightType == TK_DOUBLE || rightType == TK_INT)) {
-                return 0;
-            } else {
-                handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
-            }
-            break;
-        case '??':
-             if (leftType == rightType) {
-                return 0;
-            } else {
-                handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
-            }
-            break;
-        default:
-            handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
-            return 0;
     }
 
     switch (node->token.type) {
@@ -171,7 +141,7 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
         case TK_EQ:
         case TK_NEQ:
             if (leftType == rightType) {
-                node->resultType = leftType;
+                node->resultType = TK_BOOLEAN;
                 return 0;
             } else {
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
@@ -181,9 +151,10 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
         case TK_GT:
         case TK_LE:
         case TK_GE:
-            if ((leftType == TK_DOUBLE || leftType == TK_INT) &&
-                (rightType == TK_DOUBLE || rightType == TK_INT)) {
-                node->resultType = leftType;
+            if ((leftType == rightType) && 
+                (leftType >= TK_DOUBLE && leftType <= TK_MLSTRING)
+                ) {
+                node->resultType = TK_BOOLEAN;
                return 0;
             } else {
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
@@ -321,7 +292,7 @@ int get_precedence(token_t top, token_t current) {
     return Precedence_table[top.type][current.type];
 }
 
-void rule_expresion(parser_t *parser, TokenArray tokenArray){
+tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
     Stack* stack= (Stack*)malloc(sizeof(Stack));
     stack_init(stack);
     Stack* expr= (Stack*)malloc(sizeof(Stack));
@@ -361,4 +332,5 @@ void rule_expresion(parser_t *parser, TokenArray tokenArray){
         }
     }
     tk_type_t result = stack->top->data.node->resultType;
+    return result;
 }

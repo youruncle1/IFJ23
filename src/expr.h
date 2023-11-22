@@ -1,3 +1,5 @@
+#ifndef EXPR_H
+#define EXPR_H
 /*
 IFJ PROJEKT 2023/2024
 file: "src/scanner.c"
@@ -83,13 +85,20 @@ typedef enum identType {
 
 
 void stack_init(Stack *stack);
-bool stack_push(Stack *stack, token_t token);
-
+bool stack_push_token(Stack *stack, token_t token);
+void stack_push_node(Stack *stack, ASTNode *node);
+void stack_push_after_terminal(Stack *stack, token_t token);
 bool stack_pop(Stack *stack);
 bool stack_isempty(Stack *stack);
-bool is_operator(token_t* op);
-
+int performSemanticCheck(ASTNode* node, parser_t *parser);
+ASTNode *create_node(token_t token, ASTNodeType type);
+ASTNode *parse_non_terminal(token_t token);
+ASTNode *parse_unary(Stack *stack);
+ASTNode *parse_binary(Stack *stack, parser_t *parser);
+ASTNode *parse_par(Stack *stack);
+ASTNode *parse_expression(Stack *stack, parser_t *parser);
 int get_precedence(token_t top, token_t current);
-void to_postfix(token_t* postfix);
-int parse();
+void rule_expression(parser_t *parser, TokenArray tokenArray);
+tk_type_t typeOf_ID(parser_t * parser, char* String);
 
+#endif
