@@ -62,12 +62,12 @@ void stack_push_after_terminal(Stack *stack, token_t token){
     token_t tmp;
     if (stack->top->data.token.type >= TK_UNWRAP && stack->top->data.token.type <= TK_RPAR) // Check if top is terminal
     {
-        stack_push(&stack, token);
+        stack_push_token(stack, token);
     }else
     {
         tmp = stack->top->data.token;
-        stack_pop(&stack);
-        stack_push_after_terminal(&stack,token);
+        stack_pop(stack);
+        stack_push_after_terminal(stack,token);
     }
     
 }
@@ -160,7 +160,7 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
             }
             break;
-        case '??':
+        case TK_COALESCE:
             if (leftType != TK_KW_NIL) {
                 node->resultType = leftType;
                 return 0;
@@ -198,10 +198,10 @@ ASTNode *parse_unary(Stack *stack){
 }
 tk_type_t typeOf_ID(parser_t * parser, char* String){
     Node *node;
-    if (node=stackSearch(parser->local_frame, String)!= NULL)
+    if ((node = stackSearch(parser->local_frame, String)) != NULL)
     {
         return node->symbol.type;
-    } else if (node=search(parser->global_frame, String)!= NULL)
+    } else if ((node = search(parser->global_frame, String)) != NULL)
     {
         return node->symbol.type;
     } else
@@ -210,11 +210,11 @@ tk_type_t typeOf_ID(parser_t * parser, char* String){
 ASTNode *parse_binary(Stack *stack, parser_t *parser){
 
     ASTNode *right = parse_non_terminal(stack->top->data.token);
-    stack_pop(&stack);
+    stack_pop(stack);
     token_t op = stack->top->data.token;
-    stack_pop(&stack);
+    stack_pop(stack);
     ASTNode *left = parse_non_terminal(stack->top->data.token);
-    stack_pop(&stack);
+    stack_pop(stack);
     ASTNode *node = create_node(op, AST_BINARY_OP);
 
     node->right = right;
@@ -230,7 +230,7 @@ ASTNode *parse_par(Stack *stack){
         // Error
         handle_error(SYNTAX_ERROR,stack->top->data.token.line, "Expression");
     } else
-        stack_pop(&stack);
+        stack_pop(stack);
     if (stack->top->itemType == TOKEN_TYPE)
     {
         /* Error */
@@ -238,7 +238,7 @@ ASTNode *parse_par(Stack *stack){
     } else
     {
         node = stack->top->data.node;
-        stack_pop(&stack);
+        stack_pop(stack);
     }
     if (stack->top->data.token.type != TK_LPAR)
     {
@@ -263,7 +263,7 @@ ASTNode *parse_expression(Stack *stack, parser_t *parser) {
     {
         if ((stack->top->data.token.type >= TK_IDENTIFIER && stack->top->data.token.type <= TK_MLSTRING) && (stack->top->next_item->data.token.type == TK_UNWRAP))
         {
-            ASTNode *node = parse_unary(&stack);
+            ASTNode *node = parse_unary(stack);
             return node;
         }
         else
@@ -276,7 +276,7 @@ ASTNode *parse_expression(Stack *stack, parser_t *parser) {
     {
          if (stack->top->next_item->data.token.type <= TK_COALESCE && stack->top->next_item->data.token.type >= TK_MUL)
          {
-            ASTNode *node = parse_binary(&stack, parser);
+            ASTNode *node = parse_binary(stack, parser);
             return node;
          }
          
@@ -299,7 +299,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
     stack_init(expr);
     token_t dollar = create_token(TK_DOLLAR,0,0);
     token_t start = create_token(TK_LEFT,0,0);
-    stack_push(stack, dollar);
+    stack_push_token(stack, dollar);
 
     while (parser->current_token.type > TK_KW_DOUBLE) {
         int precedence = get_precedence(stack->top->data.token, parser->current_token);
@@ -307,24 +307,24 @@ tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
 
         switch (precedence){
             case '=':
-                stack_push(stack,parser->current_token);
-                parser_get_next_token(&parser,&tokenArray);
+                stack_push_token(stack,parser->current_token);
+                parser_get_next_token(parser,&tokenArray);
                 break;
             case '>':
                 while (stack->top->data.token.type != TK_LEFT)
                 {
                     if (stack->top->data.token.type != TK_LEFT)
                     {   
-                        stack_push(&expr, stack->top->data.token);
-                        stack_pop(&stack);
+                        stack_push_token(expr, stack->top->data.token);
+                        stack_pop(stack);
                     }
                 }
-                stack_push_node(&stack, parse_expression(&expr, parser));
+                stack_push_node(stack, parse_expression(expr, parser));
                 break;
 
             case '<':
-                stack_push_after_terminal(&stack, parser->current_token);
-                parser_get_next_token(&parser, &tokenArray);
+                stack_push_after_terminal(stack, parser->current_token);
+                parser_get_next_token(parser, &tokenArray);
 
                 break;
             default:

@@ -97,7 +97,7 @@ void InsertParam(Node *root, const char *funcKey, const char *name, const char *
 void InsertType(Node *root, const char *key, tk_type_t type){
     Node *funcNode = search(root, key);
     if (funcNode == NULL) {
-        handle_error(INTERNAL_COMPILER_ERROR, 0, "Desired function not found in symtable");
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "Desired function/variable not found in symtable");
         return;
     }
     

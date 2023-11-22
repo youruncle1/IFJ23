@@ -13,6 +13,7 @@ authors: xpolia05
 #include "scanner.h"
 #include "error.h"
 #include "parser.h"
+#include "expr.h"
 
 TokenArray *initTokenArray() {
     TokenArray *array = malloc(sizeof(TokenArray));
@@ -47,7 +48,7 @@ void parser_get_next_token(parser_t *parser, TokenArray *tokenArray) {
 
 token_t token_lookahead(parser_t *parser, TokenArray *tokenArray) {
     if (parser->TKAIndex < tokenArray->size) {
-        unsigned int next_idx = parser->TKAIndex + 1;
+        unsigned int next_idx = parser->TKAIndex;
         return tokenArray->tokens[next_idx];
     } else {
         // should never happen...
@@ -71,13 +72,13 @@ bool check_token_type(parser_t *parser, tk_type_t expectedType) {
 /* checks if token type is one of the language's datatype */
 bool is_token_datatype(tk_type_t token) {
     switch (token) {
-        case TK_KW_INT:
-        case TK_KW_DOUBLE:
-        case TK_KW_STRING:
-        case TK_KW_INT_OPT:
-        case TK_KW_DOUBLE_OPT:
-        case TK_KW_STRING_OPT:
-        case TK_KW_NIL:
+        case TK_KW_INT:         // Int
+        case TK_KW_DOUBLE:      // Double
+        case TK_KW_STRING:      // String
+        case TK_KW_INT_OPT:     // Int?
+        case TK_KW_DOUBLE_OPT:  // Double?
+        case TK_KW_STRING_OPT:  // String?
+        case TK_KW_NIL:         // for unintialized variables
             return true;
         default:
             return false;
@@ -198,6 +199,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
     
     check_next_token(parser, tokenArray, TK_IDENTIFIER); // Identifier
     token_t tmpToken = parser->current_token;
+    tk_type_t exprType;
     
     parser_insertVar2symtable(parser, isLet); // Insert var into symbol table with redefinition check
 
@@ -233,7 +235,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
             parseFunctionCall(parser, tokenArray);
         } else {
             // Expression
-            //parseExpression(parser, tokenArray);
+            tk_type_t exprType = rule_expression(parser, *tokenArray);
         }
         /*
             TU_SEMANTIKA
@@ -242,6 +244,13 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
                 ak nebol definovany typ -> vlozit typ do variabilnej symtable pomocou insertType()
             a pouzit updateInit(), zmeni flag ze bola premenna inicializovana
         */
+        if (!hasType) {
+            InsertType((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, tmpToken.data.String, parser->current_token.type);
+        } else if (hasType){
+            if (tmpToken.type != exprType) {
+                handle_error(SEMANTIC_TYPE_COMPATIBILITY, tmpToken.line, "Incompatible type of expression with variable");
+            }
+        }
         var_updateInit(parser, tmpToken);
     }
 
@@ -338,7 +347,7 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray) {
     Parameter *parsedParameters = NULL;
     unsigned int *parsedParamCount = 0;
 
-    parseFunctionCallParams(parser, tokenArray, tmpToken, &parsedParameters, &parsedParamCount);
+    parseFunctionCallParams(parser, tokenArray, tmpToken, &parsedParameters, parsedParamCount);
 
     //check_next_token(parser, tokenArray, TK_RPAR); uz by mal byt consumed z parseFunctionCallParams
 

@@ -25,19 +25,6 @@ typedef enum {
     AST_NODE_TYPE
 } ItemType;
 
-typedef struct StackItem {
-    ItemType itemType;
-    union {
-        token_t token;
-        ASTNode *node;
-    } data;
-    struct StackItem *next_item;
-}StackItem;
-
-typedef struct Stack {
-    struct StackItem *top;
-    size_t size;
-}Stack;
 
 typedef enum {
     AST_INTEGER,
@@ -56,6 +43,20 @@ typedef struct ASTNode {
     struct ASTNode *right;
     
 } ASTNode;
+
+typedef struct StackItem {
+    ItemType itemType;
+    union {
+        token_t token;
+        ASTNode *node;
+    } data;
+    struct StackItem *next_item;
+}StackItem;
+
+typedef struct Stack {
+    struct StackItem *top;
+    size_t size;
+}Stack;
 
 typedef enum identType { 
     I_NEG,
@@ -98,7 +99,7 @@ ASTNode *parse_binary(Stack *stack, parser_t *parser);
 ASTNode *parse_par(Stack *stack);
 ASTNode *parse_expression(Stack *stack, parser_t *parser);
 int get_precedence(token_t top, token_t current);
-void rule_expression(parser_t *parser, TokenArray tokenArray);
+tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray);
 tk_type_t typeOf_ID(parser_t * parser, char* String);
 
 #endif
