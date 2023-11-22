@@ -195,34 +195,39 @@ void setupFunctionScope(parser_t *parser, const char *functionName) {
 void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
 
     bool isLet = (parser->current_token.type == TK_KW_LET);
-    check_next_token(parser, tokenArray, TK_IDENTIFIER);
-
-    const char* varName = parser->current_token.data.String;
-    parser_insertVar2symtable(parser, isLet);                 // should do redefinition check
+    
+    check_next_token(parser, tokenArray, TK_IDENTIFIER); // Identifier
+    token_t tmpToken = parser->current_token;
+    
+    parser_insertVar2symtable(parser, isLet); // Insert var into symbol table with redefinition check
 
     bool hasType = false, hasInitialization = false;
-    token_t tmpToken = parser->current_token;                          // udrzi nazov identifikatoru
 
-    token_t lookAheadToken = parser->current_token;
-    parser_get_next_token(parser, tokenArray);
+    token_t lookAheadToken = token_lookahead(parser, tokenArray);
+
+    // Let a : Int
+    // Let a = write()
+    // Let a : Int = write()
 
     // Check for type
-    if (parser->current_token.type == TK_COLON) {
-        hasType = true;
-        parser_get_next_token(parser, tokenArray); // Datatype
+    if (lookAheadToken.type == TK_COLON) {
+        parser_get_next_token(parser, tokenArray); // Consume ':' token
+        parser_get_next_token(parser, tokenArray); // Consume datatype token
         if (!is_token_datatype(parser->current_token.type)) {
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected data type");
         }
         // Update type in symbol table
-        InsertType((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, varName, parser->current_token.type);
-        //parser_get_next_token(parser, tokenArray);
-        token_t lookAheadToken = token_lookahead(parser,tokenArray);
+        InsertType((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, tmpToken.data.String, parser->current_token.type);
+        hasType = true;
+        lookAheadToken = token_lookahead(parser, tokenArray); // Update lookahead token for possible '='
     }
 
     // Check for initialization
     if (lookAheadToken.type == TK_ASSIGN) {
+        parser_get_next_token(parser, tokenArray); // Consume '=' token
         hasInitialization = true;
-        token_t nextToken = token_lookahead(parser, tokenArray);
+
+        token_t nextToken = token_lookahead(parser, tokenArray); // Look ahead to distinguish between function call and expression
         if (nextToken.type == TK_IDENTIFIER && token_lookahead(parser, tokenArray).type == TK_RPAR) {
             // Function call
             parseFunctionCall(parser, tokenArray);
