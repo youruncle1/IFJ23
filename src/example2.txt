@@ -1,0 +1,19 @@
+/*This is a code*/
+write("Input a number")
+
+// Read an integer from user input
+if let number = readInt() {
+    parity(number: number)
+} else {
+    write("Invalid input. Please enter a valid number.")
+}
+
+// Function declaration
+func parity(_ number : Int) {
+    let sto = number - 100
+    if sto > 0 {
+        print("Number is bigger than 100.")
+    } else {
+        print("Number is lesser than 100.")
+    }
+}

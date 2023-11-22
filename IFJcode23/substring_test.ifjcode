@@ -1,0 +1,57 @@
+.IFJcode23
+JUMP _skip_substring
+LABEL substring
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@j
+DEFVAR LF@i
+DEFVAR LF@str
+DEFVAR LF@len
+POPS LF@j
+POPS LF@i
+POPS LF@str
+STRLEN LF@len LF@str
+DEFVAR LF@cmp
+#Guard functionality
+LT LF@cmp LF@i int@0
+JUMPIFEQ _retnil LF@cmp bool@true
+LT LF@cmp LF@j int@0
+JUMPIFEQ _retnil LF@cmp bool@true
+GT LF@cmp LF@i LF@j
+JUMPIFEQ _retnil LF@cmp bool@true
+EQ LF@cmp LF@i LF@len
+JUMPIFEQ _retnil LF@cmp bool@true
+GT LF@cmp LF@i LF@len
+JUMPIFEQ _retnil LF@cmp bool@true
+GT LF@cmp LF@j LF@len
+JUMPIFEQ _retnil LF@cmp bool@true
+#Making of substring
+DEFVAR LF@c
+DEFVAR LF@resultString
+MOVE LF@resultString string@
+LABEL _writeSubstring
+JUMPIFEQ _finished LF@i LF@j
+GETCHAR LF@c LF@str LF@i
+CONCAT LF@resultString LF@resultString LF@c
+ADD LF@i LF@i int@1
+JUMP _writeSubstring
+LABEL _finished
+PUSHS LF@resultString
+POPFRAME
+RETURN
+LABEL _retnil
+PUSHS nil@nil
+POPFRAME
+RETURN
+LABEL _skip_substring
+
+DEFVAR GF@str
+#string dlzky 10
+MOVE GF@str string@0123456789
+PUSHS GF@str
+PUSHS int@0
+PUSHS int@10
+CALL substring
+POPS GF@str
+WRITE GF@str
+WRITE string@\010
