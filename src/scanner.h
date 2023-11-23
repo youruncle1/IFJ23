@@ -81,9 +81,9 @@ typedef enum {
     TK_INT,           // integer literal
     TK_STRING,        // string literal
     TK_MLSTRING,      // multi-line string literal
-    TK_BOOLEAN,       // Boolean
 
     TK_DOLLAR,        // $ For expression 
+    TK_BOOLEAN,       // Boolean
 
     /* Keywords */
     TK_KW_DOUBLE,

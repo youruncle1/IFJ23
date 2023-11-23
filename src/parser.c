@@ -235,6 +235,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
             parseFunctionCall(parser, tokenArray);
         } else {
             // Expression
+            parser_get_next_token(parser, tokenArray);
             tk_type_t exprType = rule_expression(parser, *tokenArray);
         }
         /*

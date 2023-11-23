@@ -36,8 +36,8 @@ typedef enum {
 } ASTNodeType;
 
 typedef struct ASTNode {
-    ASTNodeType type;
-    ItemType resultType;
+    tk_type_t resultType;
+    ItemType type;
     token_t token;
     struct ASTNode *left;
     struct ASTNode *right;
@@ -89,7 +89,7 @@ void stack_init(Stack *stack);
 bool stack_push_token(Stack *stack, token_t token);
 void stack_push_node(Stack *stack, ASTNode *node);
 void stack_push_after_terminal(Stack *stack, token_t token);
-bool stack_pop(Stack *stack);
+StackItem *stack_pop(Stack *stack);
 bool stack_isempty(Stack *stack);
 int performSemanticCheck(ASTNode* node, parser_t *parser);
 ASTNode *create_node(token_t token, ASTNodeType type);

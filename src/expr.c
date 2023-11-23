@@ -3,26 +3,26 @@
 #define TABLE_SIZE 20
 
 const char Precedence_table[TABLE_SIZE][TABLE_SIZE] = {
-    //         !    *    /    +    -    <   <=    >    >=   ==  !=    ??   (    )    ID  INT  DBL  STR  NIL   $
-    /* ! */  {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>'},
-    /* * */  {'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* / */  {'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* + */  {'<', '<', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* - */  {'<', '<', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* < */  {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* <= */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* > */  {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* >= */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* == */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* != */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* ?? */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* ( */  {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '=', '>', '>', '>', '>', '>', '>'},
-    /* ) */  {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>'},
-    /* ID  */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* INT */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* DBL */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* STR */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
-    /* NIL */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>'},
+    //         !    *    /    +    -    <   <=    >    >=   ==  !=    ??   (    )    ID  INT  DBL  STR  NIL   $   [riadky][stlpce]
+    /* * */  {'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* ! */  {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '<', '<', '<', '>'},
+    /* / */  {'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* + */  {'<', '<', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* - */  {'<', '<', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* < */  {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* <= */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* > */  {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* >= */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* == */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* != */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* ?? */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* ( */  {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '=', '>', '<', '<', '<', '<', '>'},
+    /* ) */  {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '<', '<', '<', '>'},
+    /* ID  */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* INT */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* DBL */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* STR */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* NIL */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
     /* $  */ {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '='},
 };
 
@@ -46,6 +46,10 @@ bool stack_push_token(Stack *stack, token_t token){
     return true;
 }
 
+void stack_empty(Stack *stack){
+    stack->top= NULL;
+    stack->size = 0;
+}
 void stack_push_node(Stack *stack, ASTNode *node){
      StackItem *tmp = malloc(sizeof(StackItem));
 
@@ -58,27 +62,45 @@ void stack_push_node(Stack *stack, ASTNode *node){
     stack->top = tmp;
     stack->size++;
 }
+token_t stack_top_terminal(StackItem *item){
+    if (item->itemType == TOKEN_TYPE)
+        if (item->data.token.type >= TK_UNWRAP && item->data.token.type <= TK_DOLLAR) // Check if top is terminal
+        {
+            return item->data.token;
+        }else
+        {
+            return stack_top_terminal(item->next_item);
+        }
+    else
+        return stack_top_terminal(item->next_item);
+}
 void stack_push_after_terminal(Stack *stack, token_t token){
     token_t tmp;
-    if (stack->top->data.token.type >= TK_UNWRAP && stack->top->data.token.type <= TK_RPAR) // Check if top is terminal
-    {
-        stack_push_token(stack, token);
-    }else
-    {
-        tmp = stack->top->data.token;
+    if (stack->top->itemType == TOKEN_TYPE)
+        if (stack->top->data.token.type >= TK_UNWRAP && stack->top->data.token.type <= TK_DOLLAR ) // Check if top is terminal
+        {
+            stack_push_token(stack, token);
+        }else
+        {
+            tmp = stack->top->data.token;
+            stack_pop(stack);
+            stack_push_after_terminal(stack,token);
+            stack_push_token(stack,tmp);
+        }
+    else {
+        ASTNode* tmpNode = stack->top->data.node;
         stack_pop(stack);
         stack_push_after_terminal(stack,token);
+        stack_push_node(stack,tmpNode);
     }
-    
 }
-bool stack_pop(Stack *stack) {
+StackItem *stack_pop(Stack *stack) {
     StackItem *pop_item = NULL;
     if (stack->top != NULL) {
         pop_item = stack->top;
         stack->top = stack->top->next_item;
         stack->size--;
-        free(pop_item);
-        return true;
+        return pop_item;
     }
     else {
         return false;
@@ -94,27 +116,21 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
     if (node->left->token.type >= TK_UNWRAP && node->left->token.type <= TK_COALESCE)
         leftType = node->left->resultType;
     else
-        leftType = node->left->type;
+        leftType = node->left->token.type;
     if (node->right->token.type >= TK_UNWRAP && node->right->token.type <= TK_COALESCE)
         rightType = node->left->resultType;
     else
-        rightType = node->right->type;
+        rightType = node->right->token.type;
 
-    if (node->left->type == TK_IDENTIFIER)
+    if (node->left->token.type == TK_IDENTIFIER)
     {
         leftType = typeOf_ID(parser, node->left->token.data.String);
-    } else 
-        leftType = node->left->type;
-    if (node->right->type == TK_IDENTIFIER)
+    }
+    if (node->right->token.type == TK_IDENTIFIER)
     {
         rightType = typeOf_ID(parser, node->right->token.data.String);
     }
 
-
-    if (leftType != rightType) {
-        handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
-        return 0;
-    }
 
     switch (node->token.type) {
         case TK_PLUS:
@@ -208,15 +224,22 @@ tk_type_t typeOf_ID(parser_t * parser, char* String){
         handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "");
 }
 ASTNode *parse_binary(Stack *stack, parser_t *parser){
-
-    ASTNode *right = parse_non_terminal(stack->top->data.token);
-    stack_pop(stack);
+    ASTNode *right;
+    ASTNode *left;
+    if (stack->top->itemType == AST_NODE_TYPE)
+    {
+        right = stack_pop(stack)->data.node;    
+    } else
+        right = parse_non_terminal(stack_pop(stack)->data.token);
     token_t op = stack->top->data.token;
     stack_pop(stack);
-    ASTNode *left = parse_non_terminal(stack->top->data.token);
-    stack_pop(stack);
-    ASTNode *node = create_node(op, AST_BINARY_OP);
 
+    ASTNode *node = create_node(op, AST_BINARY_OP);
+    if (stack->top->itemType == AST_NODE_TYPE)
+    {
+        left = stack_pop(stack)->data.node;    
+    } else
+        left = parse_non_terminal(stack_pop(stack)->data.token);
     node->right = right;
     node->left = left;
     performSemanticCheck(node,parser);
@@ -253,6 +276,7 @@ ASTNode *parse_expression(Stack *stack, parser_t *parser) {
         if (stack->top->data.token.type >= TK_IDENTIFIER && stack->top->data.token.type <= TK_MLSTRING)
         {
             ASTNode *nonTerm = create_node(stack->top->data.token, AST_NON_TERM);
+            nonTerm->resultType = nonTerm->token.type;
             return nonTerm;
         } else
         {
@@ -285,7 +309,7 @@ ASTNode *parse_expression(Stack *stack, parser_t *parser) {
 }
 
 int get_precedence(token_t top, token_t current) {
-    if (top.type >= TABLE_SIZE || current.type >= TABLE_SIZE)
+    if (top.type > TABLE_SIZE || current.type > TABLE_SIZE)
     {
         return '>';
     }
@@ -293,17 +317,25 @@ int get_precedence(token_t top, token_t current) {
 }
 
 tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
-    Stack* stack= (Stack*)malloc(sizeof(Stack));
+    Stack *stack= (Stack*)malloc(sizeof(Stack));
     stack_init(stack);
-    Stack* expr= (Stack*)malloc(sizeof(Stack));
+    Stack *expr= (Stack*)malloc(sizeof(Stack));
     stack_init(expr);
     token_t dollar = create_token(TK_DOLLAR,0,0);
     token_t start = create_token(TK_LEFT,0,0);
+    tk_type_t result;
     stack_push_token(stack, dollar);
+    
 
-    while (parser->current_token.type > TK_KW_DOUBLE) {
-        int precedence = get_precedence(stack->top->data.token, parser->current_token);
-        // stack_push(stack, parser->current_token);
+    while (true) {
+        int precedence = get_precedence(stack_top_terminal(stack->top), parser->current_token);
+        StackItem *Item;
+
+        if (stack->top->itemType == AST_NODE_TYPE && stack->size == 2 &&
+            precedence == '>'){
+            return stack->top->data.node->resultType;
+            }
+
 
         switch (precedence){
             case '=':
@@ -311,26 +343,37 @@ tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
                 parser_get_next_token(parser,&tokenArray);
                 break;
             case '>':
-                while (stack->top->data.token.type != TK_LEFT)
-                {
-                    if (stack->top->data.token.type != TK_LEFT)
-                    {   
-                        stack_push_token(expr, stack->top->data.token);
-                        stack_pop(stack);
+                while (1) {
+                    Item = stack_pop(stack);
+
+                    if ((Item->itemType == TOKEN_TYPE && Item->data.token.type != TK_LEFT) || Item->itemType == AST_NODE_TYPE) {
+                        if (Item->data.token.type != TK_LEFT) {
+                            if (Item->itemType == AST_NODE_TYPE) {
+                                stack_push_node(expr, Item->data.node);
+                            } else {
+                                stack_push_token(expr, Item->data.token);
+                            }
+                        } else  
+                            free(Item);
+                    } else {
+                        // Break the loop if the conditions are not met
+                        break;
                     }
+                    free(Item);
                 }
                 stack_push_node(stack, parse_expression(expr, parser));
                 break;
 
             case '<':
-                stack_push_after_terminal(stack, parser->current_token);
+                stack_push_after_terminal(stack , start);
+                stack_push_token(stack, parser->current_token);
                 parser_get_next_token(parser, &tokenArray);
 
                 break;
             default:
                 break;
         }
+        stack_empty(expr);
     }
-    tk_type_t result = stack->top->data.node->resultType;
-    return result;
+    // return result;
 }
