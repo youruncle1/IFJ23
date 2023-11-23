@@ -31,6 +31,7 @@ int main(){
     add_Instruction( &gen.functionHead, "HEAD\n" );
     add_Instruction( &gen.functionFoot, "FOOT\n" );
     add_Instruction( &gen.functionBody, "BODY\n");
+    add_Int( &gen.functionFoot, 87 );
     gen_Function( &gen );
 
     print_Code(&gen);

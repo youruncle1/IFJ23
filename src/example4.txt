@@ -1,0 +1,8 @@
+var a = 5
+var b : Int
+b = 9
+if ( a < b ) {
+    write("9")
+} else {
+    write("10")
+}

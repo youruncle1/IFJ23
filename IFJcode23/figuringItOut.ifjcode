@@ -1,0 +1,94 @@
+.IFJcode23
+
+#/* Program 3: Prace s retezci a vestavenymi funkcemi */
+
+#implementacia readString
+JUMP _jumpOverReadString
+LABEL readString
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@tmp1
+READ LF@tmp1 string
+PUSHS LF@tmp1
+POPFRAME
+RETURN
+LABEL _jumpOverReadString
+
+#inmplementacia write
+JUMP _skip_write
+LABEL write
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@term
+DEFVAR LF@termCount
+POPS LF@termCount
+LABEL _writeTerms
+JUMPIFEQ _writeEnd LF@termCount int@0
+SUB LF@termCount LF@termCount int@1
+POPS LF@term
+WRITE LF@term
+JUMP _writeTerms
+LABEL _writeEnd
+PUSHS nil@nil
+POPFRAME
+RETURN
+LABEL _skip_write
+
+#implementacia length
+JUMP _skip_length
+LABEL length
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@len
+DEFVAR LF@str
+POPS LF@str
+STRLEN LF@len LF@str
+PUSHS LF@len
+POPFRAME
+RETURN
+LABEL _skip_length
+
+#main body
+DEFVAR GF@str1
+MOVE GF@str1 string@"Toto\032je\032nejaky\032text\032v\032programu\032jazyka\032IFJ23
+DEFVAR GF@str2
+MOVE GF@str2 string@,\032ktery\032jeste\032trochu\032obohatime
+CONCAT GF@str2 GF@str1 GF@str2
+DEFVAR GF@i
+PUSHS GF@str1
+CALL length
+POPS GF@i
+#tu mi parser povie kolko argumentov mam pred funkciou write
+PUSHS string@\010
+PUSHS GF@i
+PUSHS string@Pozice\032retezce\032"text"\032v\032str2:\032
+PUSHS int@3
+CALL write
+
+PUSHS string@Zadejte\032serazenou\032posloupnost\032vsech\032malych\032pismen\032a-h,\032
+PUSHS int@1
+CALL write
+
+DEFVAR GF@newInput
+# MOVE GF@newInput nil@nil
+CALL readString
+POPS GF@newInput
+
+JUMPIFEQ _else_0 GF@newInput nil@nil
+MOVE GF@str1 GF@newInput
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@tmp
+LABEL _while
+PUSHS string@Spatne\032zadana\032posloupnost,\032zkuste\032znovu:\010
+PUSHS int@1
+CALL write
+CALL readString
+POPS LF@tmp
+MOVE GF@str1 LF@tmp
+JUMPIFNEQ _str1_nempty GF@str1 nil@nil
+MOVE GF@str1 string@
+LABEL _str1_nempty
+JUMPIFNEQ _while GF@str1 string@abcdefgh
+POPFRAME
+LABEL _else_0

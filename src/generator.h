@@ -15,6 +15,8 @@ typedef struct{
     instructionTape_t functionBody;
     instructionTape_t functionFoot;
     instructionTape_t functionName;
+    int selectCount;
+    int iterCount;
 }generator_t;
 
 generator_t gen_Init();

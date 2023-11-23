@@ -2,14 +2,15 @@
 #define INSTRUCTION_TAPE
 
 #include <stdlib.h>
-
+#include <string.h>
+#include <stdio.h>
 
 
 
 
 typedef struct{
-    int len;             //length of tape
-    int capacity;        //total capacity of tape
+    size_t len;             //length of tape
+    size_t capacity;        //total capacity of tape
     char* data;             //instructions
 }instructionTape_t;
 
@@ -19,6 +20,8 @@ typedef struct{
 instructionTape_t init_Tape();
 
 void add_newLine( instructionTape_t* tape );
+
+void add_Int( instructionTape_t* tape, int n );
 
 void add_Instruction( instructionTape_t* tape, char* instruction );
 

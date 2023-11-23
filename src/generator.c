@@ -12,9 +12,20 @@ generator_t gen_Init(){
     gen.functionBody = init_Tape();
     gen.functionFoot = init_Tape();
     gen.functionName = init_Tape();
-    add_Instruction(&gen.header, ".IFJcode23\n");   //every IFJcode23 needs to start with .IFJcode23 header
+    gen.selectCount = 0;
+    gen.iterCount = 0;
     return gen;
 }
+
+void gen_Header( generator_t* gen ) {
+    add_Instruction(&gen->header, ".IFJcode23\n"                    //every IFJcode23 needs to start with .IFJcode23 header
+                                  "DEFVAR GF@&bool\n"               //
+                                  "DEFVAR GF@&tmp1\n"               //Global variables
+                                  "DEFVAR GF@&tmp2\n"               //
+                                  "DEFVAR GF@&tmp3\n"               //
+                                  );
+
+}  
 
 void gen_VarDefinition( generator_t* gen, parser_t* parser ) {
 
@@ -47,10 +58,10 @@ void gen_Label( generator_t* gen, parser_t* parser ) {
 void gen_FunctionHeader( generator_t* gen, parser_t* parser ) {
     
     add_Instruction( &gen->functionHead, "JUMP _skip_" );
-    add_Instruction( &gen->functionHead, parser->current_token.data.String );
+    add_Instruction( &gen->functionHead, parser->current_token.data.String );  //name of function
     add_newLine( &gen->functionHead );
     add_Instruction( &gen->functionHead, "LABEL ");
-    add_Instruction( &gen->functionHead, parser->current_token.data.String );
+    add_Instruction( &gen->functionHead, parser->current_token.data.String );  //name of function
     add_newLine( &gen->functionHead );
     add_Instruction( &gen->functionHead, "CREATEFRAME\n"
                                          "PUSHFRAME\n"
@@ -64,7 +75,7 @@ void gen_FunctionFooter( generator_t* gen, parser_t* parser) {
                                          );
     
     add_Instruction( &gen->functionFoot, "LABEL _skip_" );
-    add_Instruction( &gen->functionFoot, parser->current_token.data.String );
+    add_Instruction( &gen->functionFoot, parser->current_token.data.String );  //name of function
     add_newLine( &gen->functionFoot );
 }
 
@@ -103,15 +114,129 @@ void gen_FunctionParam( generator_t* gen, parser_t* parser ) {
     add_newLine(&gen->functions);
  }
 
- void gen_IfThen( generator_t* gen, parser_t* parser, int selectionNum ) {
-    
+/*
+!!!eval experession!!!
+JUMPIFEQ _else_[selectCount] GF@&bool bool@false
+true_statements
+JUMP _if_done_[selectCount]
+LABEL _else_[selectCount]
+fakse_statenebts
+LABEL _if_done[selectCount]
+*/
+ void gen_IfThenElse( generator_t* gen, parser_t* parser ) {
+
+    //eval expression somehow
+    if ( parser->inFunction ) {
+        add_Instruction( &gen->functionBody, "JUMPIFEQ _else_" );
+        add_Int( &gen->functionBody, gen->selectCount );
+        add_Instruction( &gen->functionBody, " GF@&bool bool@false\n" );
+    } else {
+        add_Instruction( &gen->mainBody, "JUMPIFEQ _else_" );
+        add_Int( &gen->mainBody, gen->selectCount );
+        add_Instruction( &gen->mainBody, " GF@&bool bool@false\n" );
+    }
  }
 
+ void gen_IfDone( generator_t* gen, parser_t* parser ) {
+    
+    if ( parser-> inFunction ) {
+        add_Instruction( &gen->functionBody, "JUMP _if_done" );
+        add_Int( &gen->functionBody, &gen->selectCount );
+        add_newLine( &gen->functionBody );
+    } else {
+        add_Instruction( &gen->mainBody, "JUMP _if_done" );
+        add_Int( &gen->mainBody, &gen->selectCount );
+        add_newLine( &gen->mainBody );
+    }
+ }
 
+ void gen_IfDone_End( generator_t* gen, parser_t* parser ) {
+    
+    if ( parser-> inFunction ) {
+        add_Instruction( &gen->functionBody, "LABEL _if_done" );
+        add_Int( &gen->functionBody, &gen->selectCount );
+        add_newLine( &gen->functionBody );
+    } else {
+        add_Instruction( &gen->mainBody, "LABEL _if_done" );
+        add_Int( &gen->mainBody, &gen->selectCount );
+        add_newLine( &gen->mainBody );
+    }
+    //Increment the count of selections to differenriete between other flow control statements
+    gen->selectCount++;
+ }
 
+void gen_IfThenElse_End( generator_t* gen, parser_t* parser ) {
 
+    if ( parser->inFunction ) {
+        add_Instruction( &gen->functionBody, "LABEL _else_" );
+        add_Int( &gen->functionBody, gen->selectCount );
+        add_newLine( &gen->functionBody );
+    } else {
+        add_Instruction( &gen->mainBody, "LABEL _else_" );
+        add_Int( &gen->mainBody, gen->selectCount );
+        add_newLine( &gen->mainBody );
+    }
+}
 
+/*
+LABEL _while_[iterCount]                                //  \
+!!!eval expression!!!                                   //   gen_While
+JUMPIFEQ _while_end_[iterCount] GF@&bool bool@true      //  /
+statements
+JUMP _while_[iterCount]                                 //  \
+LABEL _while_end_[iterCount]                            //   gen_WhileEnd
+*/
+void gen_While( generator_t* gen, parser_t* parser ) {
+    
+    if ( parser-> inFunction ) {
+        add_Instruction( &gen->functionBody, "LABEL _while_" );
+        add_Int( &gen->functionBody, &gen->iterCount );
+        add_newLine( &gen->functionBody );
+        
+        //eval expression somehow
+        
+        add_Instruction( &gen->functionBody, "JUMPIFEQ _while_end_" );
+        add_Int( &gen->functionBody, &gen->iterCount );
+        add_Instruction( &gen->functionBody, " GF@&bool bool@true\n");
+    } else {
+        add_Instruction( &gen->mainBody, "LABEL _while_" );
+        add_Int( &gen->mainBody, &gen->iterCount );
+        add_newLine( &gen->mainBody );
+        
+        //eval expression somehow
+        
+        add_Instruction( &gen->mainBody, "JUMPIFEQ _while_end_" );
+        add_Int( &gen->mainBody, &gen->iterCount );
+        add_Instruction( &gen->mainBody, " GF@&bool bool@true\n");
+    }
+}
 
+void gen_WhileEnd( generator_t* gen, parser_t* parser ) {
+    
+    if (parser->inFunction ) {
+        
+        //add jump instruction
+        add_Instruction( &gen->functionBody, "JUMP _while_" );
+        add_Int( &gen->functionBody, &gen->iterCount );
+        add_newLine( &gen->functionBody );
+        
+        //add label for while end
+        add_Instruction( &gen->functionBody, "LABEL _while_end_" );
+        add_Int( &gen->functionBody, gen->iterCount );
+        add_newLine( &gen->functionBody );
+    } else {
+
+        //add jump instruction
+        add_Instruction( &gen->mainBody, "JUMP _while_" );
+        add_Int( &gen->mainBody, &gen->iterCount );
+        add_newLine( &gen->mainBody );
+        
+        //add label for while end
+        add_Instruction( &gen->mainBody, "LABEL _while_end_" );
+        add_Int( &gen->mainBody, gen->iterCount );
+        add_newLine( &gen->mainBody );
+    }
+}
 
 void print_Code(generator_t* gen){
     print_Intructions(&gen->header);
