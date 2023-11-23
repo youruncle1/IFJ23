@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "error.h"
 #include "scanner.h"  
-#include "symtable.h" 
+#include "symtable.h"
 
 typedef struct {
     scanner_t *scanner;

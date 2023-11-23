@@ -25,6 +25,25 @@ typedef enum {
     AST_NODE_TYPE
 } ItemType;
 
+
+typedef enum {
+    AST_INTEGER,
+    AST_NON_TERM,
+    AST_DOUBLE,
+    AST_STRING,
+    AST_BINARY_OP,
+    AST_UNARY_OP
+} ASTNodeType;
+
+typedef struct ASTNode {
+    tk_type_t resultType;
+    ItemType type;
+    token_t token;
+    struct ASTNode *left;
+    struct ASTNode *right;
+    
+} ASTNode;
+
 typedef struct StackItem {
     ItemType itemType;
     union {
@@ -38,24 +57,6 @@ typedef struct Stack {
     struct StackItem *top;
     size_t size;
 }Stack;
-
-typedef enum {
-    AST_INTEGER,
-    AST_NON_TERM,
-    AST_DOUBLE,
-    AST_STRING,
-    AST_BINARY_OP,
-    AST_UNARY_OP
-} ASTNodeType;
-
-typedef struct ASTNode {
-    ASTNodeType type;
-    ItemType resultType;
-    token_t token;
-    struct ASTNode *left;
-    struct ASTNode *right;
-    
-} ASTNode;
 
 typedef enum identType { 
     I_NEG,
@@ -88,7 +89,7 @@ void stack_init(Stack *stack);
 bool stack_push_token(Stack *stack, token_t token);
 void stack_push_node(Stack *stack, ASTNode *node);
 void stack_push_after_terminal(Stack *stack, token_t token);
-bool stack_pop(Stack *stack);
+StackItem *stack_pop(Stack *stack);
 bool stack_isempty(Stack *stack);
 int performSemanticCheck(ASTNode* node, parser_t *parser);
 ASTNode *create_node(token_t token, ASTNodeType type);
@@ -98,7 +99,7 @@ ASTNode *parse_binary(Stack *stack, parser_t *parser);
 ASTNode *parse_par(Stack *stack);
 ASTNode *parse_expression(Stack *stack, parser_t *parser);
 int get_precedence(token_t top, token_t current);
-void rule_expression(parser_t *parser, TokenArray tokenArray);
+tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray);
 tk_type_t typeOf_ID(parser_t * parser, char* String);
 
 #endif
