@@ -35,6 +35,9 @@ token_t token_lookahead(parser_t *parser, TokenArray *tokenArray);
 void check_next_token(parser_t *parser, TokenArray *tokenArray, tk_type_t expectedType);
 bool check_token_type(parser_t *parser, tk_type_t expectedType);
 bool is_token_datatype(tk_type_t token);
+bool isPartOfExpression(tk_type_t tokenType);
+bool isStartOfExpression(tk_type_t tokenType);
+tk_type_t find_varType(parser_t *parser);
 void parseProgram(parser_t *parser, TokenArray *tokenArray);
 void parseBlockContents(parser_t* parser, TokenArray *tokenArray);
 void parseBlockContent(parser_t *parser, TokenArray *tokenArray);
@@ -54,5 +57,8 @@ void parseFunctionParameters(parser_t *parser, TokenArray *tokenArray);
 void parseParameter(parser_t *parser, TokenArray *tokenArray);
 void check_next_token_and_add(TokenArray *tokenArray, parser_t *parser, tk_type_t expectedType);
 void get_next_token(parser_t *parser);
+
+// toto by bolo najlepsie nepouzivat a prerobit spravne exprparser...
+tk_type_t convert_literal_to_datatype(tk_type_t tokenType);
 
 #endif

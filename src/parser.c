@@ -85,6 +85,20 @@ bool is_token_datatype(tk_type_t token) {
     }
 }
 
+tk_type_t convert_literal_to_datatype(tk_type_t tokenType) {
+    switch (tokenType) {
+        case TK_INT:
+            return TK_KW_INT;
+        case TK_MLSTRING:
+        case TK_STRING:
+            return TK_KW_STRING;
+        case TK_DOUBLE:
+            return TK_KW_DOUBLE;
+        default:
+            return tokenType;
+    }
+}
+
 void parseProgram(parser_t *parser, TokenArray *tokenArray){
 
 
@@ -168,7 +182,7 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray){
 
     while(parser->current_token.type != TK_RBRACE) {
         parseBlockContent(parser, tokenArray);
-        parser_get_next_token(parser,tokenArray);
+        //parser_get_next_token(parser,tokenArray);
     }
 
     parser->inFunction = false;
@@ -193,13 +207,48 @@ void setupFunctionScope(parser_t *parser, const char *functionName) {
     push(parser->local_frame, funcParamTable);
 }
 
+bool isStartOfExpression(tk_type_t tokenType) {
+    // Check if tokenType is one of the operators that can start a complex expression
+    switch (tokenType) {
+        case TK_IDENTIFIER: // a, varB, result ...
+        case TK_INT:        // 10, 5, 2 ...
+        case TK_DOUBLE:     // 2.3, 33414.3, 0.1 ...
+        case TK_STRING:     // "hello", "", ...
+        case TK_MLSTRING:
+        case TK_LPAR:       // (...
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isPartOfExpression(tk_type_t tokenType) {
+    // Check if tokenType is one of the operators that be in a complex expression after the starting tokenType
+    switch (tokenType) {
+        case TK_MUL:
+        case TK_DIV:
+        case TK_PLUS:
+        case TK_MINUS:
+        case TK_LT:
+        case TK_LE:
+        case TK_GT:
+        case TK_GE:
+        case TK_EQ:
+        case TK_NEQ:
+        case TK_COALESCE:
+        case TK_UNWRAP:
+            return true;
+        default:
+            return false;
+    }
+}
+
 void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
 
     bool isLet = (parser->current_token.type == TK_KW_LET);
     
     check_next_token(parser, tokenArray, TK_IDENTIFIER); // Identifier
     token_t tmpToken = parser->current_token;
-    tk_type_t exprType;
     
     parser_insertVar2symtable(parser, isLet); // Insert var into symbol table with redefinition check
 
@@ -224,19 +273,45 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
         lookAheadToken = token_lookahead(parser, tokenArray); // Update lookahead token for possible '='
     }
 
+    tk_type_t exprType = TK_KW_INT;
+
     // Check for initialization
     if (lookAheadToken.type == TK_ASSIGN) {
         parser_get_next_token(parser, tokenArray); // Consume '=' token
+        parser_get_next_token(parser, tokenArray); // Consume token after '='
         hasInitialization = true;
 
         token_t nextToken = token_lookahead(parser, tokenArray); // Look ahead to distinguish between function call and expression
-        if (nextToken.type == TK_IDENTIFIER && token_lookahead(parser, tokenArray).type == TK_RPAR) {
+        if (parser->current_token.type == TK_IDENTIFIER && nextToken.type == TK_LPAR) {
             // Function call
             parseFunctionCall(parser, tokenArray);
+        } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))  
+                         || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
+            // Expressions
+            //parser_get_next_token(parser, tokenArray);
+            exprType = rule_expression(parser, *tokenArray);
+            exprType = convert_literal_to_datatype(exprType); // me no like
+
+            check_VarType(parser, tmpToken, exprType, hasType);
+        
+        } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
+            // semantika, 
+            // treba si vytvorit pomocne funkncie ktore konvertuju literaly na typy
+            // ak by to bol identifier, treba vytiahnut ten typ zo symtable, zistit ci ma prave definovana priradeny typ(hastype), ak ne tak priradit podla typu idf
+            // kedze expr call vrati token po mal by sa aj tu
+            // co ked nil?
+            tk_type_t foundType;
+            if (parser->current_token.type == TK_IDENTIFIER) {
+                foundType = find_varType(parser);
+                check_VarType(parser, tmpToken, foundType, hasType);
+            } else {
+                // literal
+                foundType = convert_literal_to_datatype(parser->current_token.type);
+                // check ci sedi foundtype s datovym typom prave definovanej premennej alebo prirad ak nema
+                check_VarType(parser, tmpToken, foundType, hasType);
+            }
         } else {
-            // Expression
-            parser_get_next_token(parser, tokenArray);
-            tk_type_t exprType = rule_expression(parser, *tokenArray);
+            handle_error(SYNTAX_ERROR, parser->current_token.line, "SYNTAX ERROR IN VARIABLE DEFINITION");
         }
         /*
             TU_SEMANTIKA
@@ -245,13 +320,6 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
                 ak nebol definovany typ -> vlozit typ do variabilnej symtable pomocou insertType()
             a pouzit updateInit(), zmeni flag ze bola premenna inicializovana
         */
-        if (!hasType) {
-            InsertType((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, tmpToken.data.String, parser->current_token.type);
-        } else if (hasType){
-            if (tmpToken.type != exprType) {
-                handle_error(SEMANTIC_TYPE_COMPATIBILITY, tmpToken.line, "Incompatible type of expression with variable");
-            }
-        }
         var_updateInit(parser, tmpToken);
     }
 
@@ -259,6 +327,26 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
     if (!hasType && !hasInitialization) {
         handle_error(SYNTAX_ERROR, parser->current_token.line, "Variable declaration must include a type or initialization");
     }
+}
+
+void check_VarType(parser_t *parser, token_t token, tk_type_t type, bool hasType){
+    if (!hasType) {
+        InsertType((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, token.data.String, type);
+    } else {
+        if (search((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, token.data.String)->symbol.type != type) {
+            handle_error(SEMANTIC_TYPE_COMPATIBILITY, token.line, "Incompatible type of assigned variable with defined variable");
+        }
+    }
+}
+
+tk_type_t find_varType(parser_t *parser){
+    Node *node;
+    if ((node = stackSearch(parser->local_frame, parser->current_token.data.String)) != NULL) {
+        return node->symbol.type;
+    } else if ((node = search(parser->global_frame, parser->current_token.data.String)) != NULL) {
+        return node->symbol.type;
+    } else
+        handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "");
 }
 
 void parser_insertVar2symtable(parser_t *parser, bool isLet){
