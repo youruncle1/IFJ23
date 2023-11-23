@@ -23,7 +23,7 @@ const char Precedence_table[TABLE_SIZE][TABLE_SIZE] = {
     /* DBL */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
     /* STR */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
     /* NIL */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
-    /* $  */ {'=', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '='},
+    /* $  */ {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '='},
 };
 
 
@@ -218,13 +218,13 @@ ASTNode *parse_non_terminal(token_t token){
 
 ASTNode *parse_unary(Stack *stack){
     ASTNode *right;
-    token_t op = stack_pop(stack)->data.token;
-    ASTNode *node = create_node(op, AST_UNARY_OP);
     if (stack->top->itemType == AST_NODE_TYPE)
     {
         right = stack_pop(stack)->data.node;    
     } else
         right = parse_non_terminal(stack_pop(stack)->data.token);
+    token_t op = stack_pop(stack)->data.token;
+    ASTNode *node = create_node(op, AST_UNARY_OP);
     node->resultType = right->resultType;
     node->right = right;
     return node;
@@ -306,7 +306,7 @@ ASTNode *parse_expression(Stack *stack, parser_t *parser) {
         }
     } else if (stack->size == 2)
     {
-        if ((stack->top->next_item->data.token.type >= TK_IDENTIFIER && stack->top->next_item->data.token.type <= TK_MLSTRING) && (stack->top->data.token.type == TK_UNWRAP))
+        if (stack->top->next_item->itemType == TOKEN_TYPE && (stack->top->next_item->data.token.type == TK_UNWRAP))
         {
             ASTNode *node = parse_unary(stack);
             return node;
