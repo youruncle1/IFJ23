@@ -49,6 +49,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray);
 void parser_insertVar2symtable(parser_t *parser, token_t tmpToken, bool isLet);
 void var_updateInit(parser_t *parser, token_t token);
 void parseControlStructure(parser_t *parser, TokenArray *tokenArray);
+void parseAssignment(parser_t *parser, TokenArray *tokenArray);
 void parseFunctionCall(parser_t *parser, TokenArray *tokenArray);
 void parseFunctionCallParams(parser_t *parser, TokenArray *tokenArray, token_t funcToken, Parameter **parsedParameters, unsigned int *parsedParamCount);
 void parseCallParameter(parser_t *parser, TokenArray *tokenArray, token_t funcToken, Parameter **parsedParameters, unsigned int *parsedParamCount);

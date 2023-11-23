@@ -157,7 +157,7 @@ void parseBlockContent(parser_t *parser, TokenArray *tokenArray){
             if (token_lookahead(parser, tokenArray).type == TK_LPAR) {          // <function_call>
                 parseFunctionCall(parser, tokenArray);
             } else if (token_lookahead(parser, tokenArray).type == TK_ASSIGN) { // <assignment>
-                //parseAssignment(parser, tokenArray);
+                parseAssignment(parser, tokenArray);
             } else {
                 handle_error(SYNTAX_ERROR, parser->current_token.line, "SYNTAX ERROR");
             }
@@ -310,7 +310,22 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
             // let a = a
             if (parser->current_token.type == TK_IDENTIFIER) {
                 // nieco este s INIT
+                Node *node;
+                if ((node = stackSearch(parser->local_frame, parser->current_token.data.String)) != NULL) {
+                    return node->symbol.type;
+                } else if ((node = search(parser->global_frame, parser->current_token.data.String)) != NULL) {
+                    return node->symbol.type;
+                } else {
+                    handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Right side of the assignment is an undefined variable");
+                }
+
                 foundType = find_varType(parser);
+                
+                if (!node->symbol.isInit){
+                    handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Assigning an uninitialized variable");
+                }
+
+
                 
             } else {
                 // literal
@@ -361,11 +376,22 @@ void check_VarType(parser_t *parser, token_t foundToken, tk_type_t type, bool ha
 tk_type_t find_varType(parser_t *parser){
     Node *node;
     if ((node = stackSearch(parser->local_frame, parser->current_token.data.String)) != NULL) {
+
+        if (node->symbol.isFunction){
+            handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Left side of the assignment is an function name, not a variable");
+        }
         return node->symbol.type;
+
     } else if ((node = search(parser->global_frame, parser->current_token.data.String)) != NULL) {
+
+        if (node->symbol.isFunction){
+            handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Left side of the assignment is an function name, not a variable");
+        }
         return node->symbol.type;
-    } else
+
+    } else {
         handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "");
+    }
 }
 
 void parser_insertVar2symtable(parser_t *parser, token_t tmpToken, bool isLet){
@@ -475,8 +501,21 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray) {
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
             if (parser->current_token.type == TK_IDENTIFIER) {
                 // nieco este s INIT
+                Node *node;
+                if ((node = stackSearch(parser->local_frame, parser->current_token.data.String)) != NULL) {
+                    return node->symbol.type;
+                } else if ((node = search(parser->global_frame, parser->current_token.data.String)) != NULL) {
+                    return node->symbol.type;
+                } else {
+                    handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Returning an undefined variable");
+                }
+
                 foundType = find_varType(parser);
                 
+                if (!node->symbol.isInit){
+                    handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Returning an uninitialized variable");
+                }
+
             } else {
                 // literal
                 foundType = convert_literal_to_datatype(parser->current_token.type);
@@ -575,6 +614,98 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, token_t funcTo
     }
 }
 
+
+void parseAssignment(parser_t *parser, TokenArray *tokenArray){
+    /* 
+    Sémantika příkazu je následující: Příkaz provádí vyhodnocení výrazu výraz (viz kapitola 5) a přiřazení jeho hodnoty do levého operandu id, 
+    který je modifikovatelnou proměnnou (tj. definovanou pomocí klíčového slova var). 
+    Pokud není hodnota výrazu typově kompatibilní s typem proměnné id, dojde k chybě 7.
+    */ 
+
+    // !!! vratit sa do vardef a return a spravit check na init 
+    // !!! pozor ci to nie je nazov funkcie
+
+    // prvy check, existuje lava strana?
+        // ak existuje, je to let? -> chyba asi 9?
+    // dalsi check: porovnat lavu s pravou stranou
+    // dalsi check: bacha na initialization pravej strany
+    // spravit updateinit ak nebola lava strana init
+
+    token_t tmpToken = parser->current_token; // should hold name of variable, for usage in updateInit
+
+    Node *node;
+    if ((node = stackSearch(parser->local_frame, parser->current_token.data.String)) != NULL) {
+        return node->symbol.type;
+    } else if ((node = search(parser->global_frame, parser->current_token.data.String)) != NULL) {
+        return node->symbol.type;
+    } else {
+        handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Left side of the assignment is an undefined variable");
+    }
+
+    if (node->symbol.isFunction){
+        handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Left side of the assignment is an function name, not a variable");
+    }
+
+    if (node->symbol.isLet){
+        handle_error(OTHER_SEMANTIC_ERROR, parser->current_token.line, "Assigning into a Immutable variable");
+    }
+
+    tk_type_t leftType = node->symbol.type;
+    tk_type_t foundType;
+    bool isInit = node->symbol.isInit; // needed?
+
+    // left hand check done
+    // right hand check
+    parser_get_next_token(parser, tokenArray); // consume '='  
+    parser_get_next_token(parser, tokenArray); // consume token after '='
+
+    token_t nextToken = token_lookahead(parser, tokenArray);
+
+    if (parser->current_token.type == TK_IDENTIFIER && nextToken.type == TK_LPAR) {
+        // Function call
+        parseFunctionCall(parser, tokenArray);
+        
+    } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))  
+                        || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
+        // Expressions
+        //parser_get_next_token(parser, tokenArray);
+        foundType = rule_expression(parser, *tokenArray);
+        foundType = convert_literal_to_datatype(foundType); // me no like
+    
+    } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
+        
+        if (parser->current_token.type == TK_IDENTIFIER) {
+            
+            Node *node;
+            if ((node = stackSearch(parser->local_frame, parser->current_token.data.String)) != NULL) {
+                return node->symbol.type;
+            } else if ((node = search(parser->global_frame, parser->current_token.data.String)) != NULL) {
+                return node->symbol.type;
+            } else {
+                handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Right side of the assignment is an undefined variable");
+            }
+            
+            foundType = find_varType(parser); // should deal with if function
+            
+            if (!node->symbol.isInit){
+                handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Assigning an uninitialized variable");
+            }
+
+            
+        } else {
+            // literal
+            foundType = convert_literal_to_datatype(parser->current_token.type);            
+        }
+    } else {
+        handle_error(SYNTAX_ERROR, parser->current_token.line, "SYNTAX ERROR IN ASSIGNMENT STATEMENT");
+    }
+    
+    if (leftType != foundType){
+        handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Left and right side of assignment typ incompability");
+    }
+    
+    var_updateInit(parser, tmpToken);
+}
 
 
 
