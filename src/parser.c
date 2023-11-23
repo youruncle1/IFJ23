@@ -46,6 +46,17 @@ void parser_get_next_token(parser_t *parser, TokenArray *tokenArray) {
     }
 }
 
+void parser_get_previous_token(parser_t *parser, TokenArray *tokenArray) {
+
+    if (parser->TKAIndex > 0) {
+        parser->current_token = tokenArray->tokens[parser->TKAIndex];
+        parser->TKAIndex--;
+    } else {
+        // should never happen...
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "OUT OF TOKENARRAY BOUNDS");
+    }
+}
+
 token_t token_lookahead(parser_t *parser, TokenArray *tokenArray) {
     if (parser->TKAIndex < tokenArray->size) {
         unsigned int next_idx = parser->TKAIndex;
@@ -230,13 +241,14 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
         hasInitialization = true;
 
         token_t nextToken = token_lookahead(parser, tokenArray); // Look ahead to distinguish between function call and expression
+        tk_type_t exprType;
         if (nextToken.type == TK_IDENTIFIER && token_lookahead(parser, tokenArray).type == TK_RPAR) {
             // Function call
             parseFunctionCall(parser, tokenArray);
         } else {
             // Expression
             parser_get_next_token(parser, tokenArray);
-            tk_type_t exprType = rule_expression(parser, *tokenArray);
+            exprType = rule_expression(parser, *tokenArray);
         }
         /*
             TU_SEMANTIKA

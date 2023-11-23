@@ -96,7 +96,7 @@ ASTNode *create_node(token_t token, ASTNodeType type);
 ASTNode *parse_non_terminal(token_t token);
 ASTNode *parse_unary(Stack *stack);
 ASTNode *parse_binary(Stack *stack, parser_t *parser);
-ASTNode *parse_par(Stack *stack);
+ASTNode *parse_par(Stack *stack, parser_t *parser);
 ASTNode *parse_expression(Stack *stack, parser_t *parser);
 int get_precedence(token_t top, token_t current);
 tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray);
