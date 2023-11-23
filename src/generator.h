@@ -14,9 +14,22 @@ typedef struct{
     instructionTape_t functionHead;
     instructionTape_t functionBody;
     instructionTape_t functionFoot;
+    instructionTape_t functionName;
 }generator_t;
 
 generator_t gen_Init();
+
+void gen_VarDefinition( generator_t* gen, parser_t* parser );
+
+void gen_FunctionHeader( generator_t* gen, parser_t* parser );
+
+void gen_FunctionFooter( generator_t* gen, parser_t* parser );
+
+void gen_FunctionCall( generator_t* gen, parser_t* parser );
+
+void gen_FunctionParam( generator_t* gen, parser_t* parser );
+
+void gen_Function( generator_t* gen );
 
 void gen_buildin_readString(generator_t* gen);
 

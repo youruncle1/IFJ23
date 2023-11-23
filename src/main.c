@@ -14,7 +14,7 @@ int main(){
 
     // gen_buildin_readDouble(&gen);
 
-    gen_buildin_write(&gen);
+    // gen_buildin_write(&gen);
 
     // gen_buildin_Int2Double(&gen);
 
@@ -27,6 +27,11 @@ int main(){
     // gen_buildin_ord(&gen);
 
     // gen_buildin_chr(&gen);
+
+    add_Instruction( &gen.functionHead, "HEAD\n" );
+    add_Instruction( &gen.functionFoot, "FOOT\n" );
+    add_Instruction( &gen.functionBody, "BODY\n");
+    gen_Function( &gen );
 
     print_Code(&gen);
 }

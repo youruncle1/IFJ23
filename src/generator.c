@@ -8,69 +8,104 @@ generator_t gen_Init(){
     gen.functions = init_Tape();
     gen.mainBody = init_Tape();
     gen.header = init_Tape();
+    gen.functionHead = init_Tape();
+    gen.functionBody = init_Tape();
+    gen.functionFoot = init_Tape();
+    gen.functionName = init_Tape();
     add_Instruction(&gen.header, ".IFJcode23\n");   //every IFJcode23 needs to start with .IFJcode23 header
     return gen;
 }
 
-void gen_VarDefinition( generator_t* gen, token_t token , bool inFunction) {
+void gen_VarDefinition( generator_t* gen, parser_t* parser ) {
 
     //Is token in global or local frame
-    if( inFunction ) {
+    if( parser->inFunction ) {
         add_Instruction( &gen->functionBody, "DEFVAR LF@" );
-        add_Instruction( &gen->functionBody, token.data.String );      //add the variable name to definition
+        add_Instruction( &gen->functionBody, parser->current_token.data.String );      //add the variable name to definition
         add_newLine( &gen->functionBody );                                             //append new line
     } else {
         add_Instruction( &gen->mainBody, "DEFVAR GF@" );
-        add_Instruction( &gen->mainBody, token.data.String );       //add the variable name to definition
+        add_Instruction( &gen->mainBody, parser->current_token.data.String );       //add the variable name to definition
         add_newLine( &gen->mainBody );                                              //append new line
     }
                                                   
 }
 
-void gen_Label( generator_t* gen, token_t* token ) {
-    return;
+void gen_Label( generator_t* gen, parser_t* parser ) {
+    
+    if( parser->inFunction ) {
+        add_Instruction( &gen->functionBody, "LABEL " );
+        add_Instruction( &gen->functionBody, parser->current_token.data.String );
+        add_newLine( &gen->functionBody );
+    } else {
+        add_Instruction( &gen->mainBody, "LABEL " );
+        add_Instruction( &gen->mainBody, parser->current_token.data.String );
+        add_newLine( &gen->mainBody );
+    }
 }
 
-void gen_FunctionHeader( generator_t* gen, token_t token ) {
+void gen_FunctionHeader( generator_t* gen, parser_t* parser ) {
     
     add_Instruction( &gen->functionHead, "JUMP _skip_" );
-    add_Instruction( &gen->functionHead, token.data.String );
+    add_Instruction( &gen->functionHead, parser->current_token.data.String );
     add_newLine( &gen->functionHead );
     add_Instruction( &gen->functionHead, "LABEL ");
-    add_Instruction( &gen->functionHead, token.data.String );
+    add_Instruction( &gen->functionHead, parser->current_token.data.String );
     add_newLine( &gen->functionHead );
     add_Instruction( &gen->functionHead, "CREATEFRAME\n"
                                          "PUSHFRAME\n"
                                          );
 }
 
-void gen_FunctionFooter( generator_t* gen, token_t token ) {
+void gen_FunctionFooter( generator_t* gen, parser_t* parser) {
     
     add_Instruction( &gen->functionFoot, "POPFRAME\n"
                                          "RETURN\n"
                                          );
     
     add_Instruction( &gen->functionFoot, "LABEL _skip_" );
-    add_Instruction( &gen->functionFoot, token.data.String );
+    add_Instruction( &gen->functionFoot, parser->current_token.data.String );
     add_newLine( &gen->functionFoot );
 }
 
-void gen_FunctionCall( generator_t* gen, token_t token, bool inFunction ) {
+void gen_FunctionCall( generator_t* gen, parser_t* parser ) {
     
-    if ( inFunction ) {
+    if ( parser->inFunction ) {
         add_Instruction( &gen->functionBody, "CALL ");
-        add_Instruction( &gen->functionBody, token.data.String );
+        add_Instruction( &gen->functionBody, parser->current_token.data.String );
         add_newLine( &gen->functionBody );
     } else {
         add_Instruction( &gen->mainBody, "CALL ");
-        add_Instruction( &gen->mainBody, token.data.String );
+        add_Instruction( &gen->mainBody, parser->current_token.data.String );
         add_newLine( &gen->mainBody );
     }
 }
 
-void gen_FunctionParams( generator_t* gen, token_t token, bool inFunction ) {
+void gen_FunctionParam( generator_t* gen, parser_t* parser ) {
     
+    if ( parser->inFunction ) {
+        add_Instruction( &gen->functionBody, "PUSHS " );
+        add_Instruction( &gen->functionBody, parser->current_token.data.String );
+        add_newLine( &gen->functionBody );
+    } else {
+        add_Instruction( &gen->mainBody, "PUSHS " );
+        add_Instruction( &gen->mainBody, parser->current_token.data.String );
+        add_newLine( &gen->mainBody );
+    }
 }
+
+ void gen_Function( generator_t* gen ) {
+    
+    //connect the head, body and foot of the function
+    add_Instruction(&gen->functions, gen->functionHead.data);
+    add_Instruction(&gen->functions, gen->functionBody.data);
+    add_Instruction(&gen->functions, gen->functionFoot.data);
+    add_newLine(&gen->functions);
+ }
+
+ void gen_IfThen( generator_t* gen, parser_t* parser, int selectionNum ) {
+    
+ }
 
 
 

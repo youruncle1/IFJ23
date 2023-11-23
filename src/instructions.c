@@ -16,7 +16,7 @@ instructionTape_t init_Tape(){
 void add_Instruction(instructionTape_t* tape, char* instruction){
     
     //if instruction is longer that the tape capacity expand tape capacity
-    size_t newLen = tape->len + strlen(instruction);
+    int newLen = tape->len + (int)strlen(instruction);
 
     if (newLen >= tape->capacity){
         tape->capacity = (tape->capacity + newLen) * 2;
@@ -40,7 +40,11 @@ void add_newLine( instructionTape_t* tape ) {
 }
 
 
+
 void print_Intructions(instructionTape_t* tape){
+    
+    // tape->capacity += 1;
+    // tape->len += 1;
     add_Instruction(tape, "\0");
 
     printf("%s", tape->data);
