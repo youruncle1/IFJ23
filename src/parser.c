@@ -28,6 +28,7 @@ parser_t initParser(scanner_t *scanner) {
                        .local_frame = initStack(),
                        .global_frame = NULL,
                        .inFunction = false,
+                       .hasReturn = false,
                        .TKAIndex = 0,
                        .scopeDepth = 0
                        };
@@ -148,8 +149,8 @@ void parseBlockContent(parser_t *parser, TokenArray *tokenArray){
             if (!parser->inFunction) {
                 handle_error(SYNTAX_ERROR, parser->current_token.line, "return keyword found outside of function");
             }
-        //parseReturn(parser, tokenArray);
-        break;
+            parseReturn(parser, tokenArray);
+            break;
         case TK_IDENTIFIER:
             // TU_SEMANTIKA
             // zistit, ci moze byt start term iba nejaky expression (a + b bez priradenia, proste expr ktory nic neurobi)
@@ -173,6 +174,8 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray){
 
     parser_get_next_token(parser, tokenArray);                        // Identifier
 
+    parser->current_func = search(parser->global_frame, parser->current_token.data.String);
+
     setupFunctionScope(parser, parser->current_token.data.String);    // <parameter_list> Local frame setup
 
     while (parser->current_token.type != TK_LBRACE) {                 // skip until '{'
@@ -182,10 +185,14 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray){
 
     while(parser->current_token.type != TK_RBRACE) {
         parseBlockContent(parser, tokenArray);
-        //parser_get_next_token(parser,tokenArray);
+        parser_get_next_token(parser,tokenArray);
     }
 
+    // CHECK CI EXISTOVAL RETURN KED SA PRESLO TELO FUNCKIE
+
+
     parser->inFunction = false;
+    parser->hasReturn = false;
     parser->scopeDepth--;                                             // scopeDepth should be 0 after this!!!
     pop(parser->local_frame);                                         // Local symtable should be clear!!!
 
@@ -215,7 +222,7 @@ bool isStartOfExpression(tk_type_t tokenType) {
         case TK_DOUBLE:     // 2.3, 33414.3, 0.1 ...
         case TK_STRING:     // "hello", "", ...
         case TK_MLSTRING:
-        case TK_LPAR:       // (...
+        case TK_LPAR:       // (... 
             return true;
         default:
             return false;
@@ -224,10 +231,10 @@ bool isStartOfExpression(tk_type_t tokenType) {
 
 bool isPartOfExpression(tk_type_t tokenType) {
     // Check if tokenType is one of the operators that be in a complex expression after the starting tokenType
-    switch (tokenType) {
+    switch (tokenType) {     
         case TK_MUL:
         case TK_DIV:
-        case TK_PLUS:
+        case TK_PLUS:       
         case TK_MINUS:
         case TK_LT:
         case TK_LE:
@@ -248,17 +255,18 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
     bool isLet = (parser->current_token.type == TK_KW_LET);
     
     check_next_token(parser, tokenArray, TK_IDENTIFIER); // Identifier
-    token_t tmpToken = parser->current_token;
-    
-    parser_insertVar2symtable(parser, isLet); // Insert var into symbol table with redefinition check
+    token_t tmpToken = parser->current_token;            // ulozeny nazov premmenej
+    tk_type_t tmpType = TK_KW_NIL;                       // ulozeny typ (ak je v definicii typ)
+    tk_type_t foundType = TK_KW_NIL;                     // ulozeny najdeny typ vyrazu
+
+    // check ci je uz definovana
+    if (search((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, parser->current_token.data.String) != NULL){
+        handle_error(SEMANTIC_UNDEFINED_FUNCTION, parser->current_token.line, "Variable redefinition in same scope");
+    }
 
     bool hasType = false, hasInitialization = false;
 
     token_t lookAheadToken = token_lookahead(parser, tokenArray);
-
-    // Let a : Int
-    // Let a = write()
-    // Let a : Int = write()
 
     // Check for type
     if (lookAheadToken.type == TK_COLON) {
@@ -268,12 +276,11 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected data type");
         }
         // Update type in symbol table
-        InsertType((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, tmpToken.data.String, parser->current_token.type);
+        tmpType = parser->current_token.type;
         hasType = true;
+
         lookAheadToken = token_lookahead(parser, tokenArray); // Update lookahead token for possible '='
     }
-
-    tk_type_t exprType = TK_KW_INT;
 
     // Check for initialization
     if (lookAheadToken.type == TK_ASSIGN) {
@@ -282,17 +289,17 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
         hasInitialization = true;
 
         token_t nextToken = token_lookahead(parser, tokenArray); // Look ahead to distinguish between function call and expression
+        
         if (parser->current_token.type == TK_IDENTIFIER && nextToken.type == TK_LPAR) {
             // Function call
             parseFunctionCall(parser, tokenArray);
+            
         } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))  
                          || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
             // Expressions
             //parser_get_next_token(parser, tokenArray);
-            exprType = rule_expression(parser, *tokenArray);
-            exprType = convert_literal_to_datatype(exprType); // me no like
-
-            check_VarType(parser, tmpToken, exprType, hasType);
+            foundType = rule_expression(parser, *tokenArray);
+            foundType = convert_literal_to_datatype(foundType); // me no like
         
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
             // semantika, 
@@ -300,15 +307,16 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
             // ak by to bol identifier, treba vytiahnut ten typ zo symtable, zistit ci ma prave definovana priradeny typ(hastype), ak ne tak priradit podla typu idf
             // kedze expr call vrati token po mal by sa aj tu
             // co ked nil?
-            tk_type_t foundType;
+            // let a = a
             if (parser->current_token.type == TK_IDENTIFIER) {
+                // nieco este s INIT
                 foundType = find_varType(parser);
-                check_VarType(parser, tmpToken, foundType, hasType);
+                
             } else {
                 // literal
                 foundType = convert_literal_to_datatype(parser->current_token.type);
                 // check ci sedi foundtype s datovym typom prave definovanej premennej alebo prirad ak nema
-                check_VarType(parser, tmpToken, foundType, hasType);
+              
             }
         } else {
             handle_error(SYNTAX_ERROR, parser->current_token.line, "SYNTAX ERROR IN VARIABLE DEFINITION");
@@ -320,6 +328,17 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
                 ak nebol definovany typ -> vlozit typ do variabilnej symtable pomocou insertType()
             a pouzit updateInit(), zmeni flag ze bola premenna inicializovana
         */
+    }
+
+    // OK, mozme ulozit
+    // Let a : Int
+    // Let a = 10
+    // Let a : Int = 10
+    parser_insertVar2symtable(parser, tmpToken, isLet); // Insert var into symbol table with redefinition check
+    if (hasType) {
+        InsertType((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, tmpToken.data.String, foundType);
+    } else if (hasInitialization){
+        check_VarType(parser, tmpToken, foundType, hasType);
         var_updateInit(parser, tmpToken);
     }
 
@@ -329,12 +348,12 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
     }
 }
 
-void check_VarType(parser_t *parser, token_t token, tk_type_t type, bool hasType){
+void check_VarType(parser_t *parser, token_t foundToken, tk_type_t type, bool hasType){
     if (!hasType) {
-        InsertType((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, token.data.String, type);
+        InsertType((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, foundToken.data.String, type);
     } else {
-        if (search((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, token.data.String)->symbol.type != type) {
-            handle_error(SEMANTIC_TYPE_COMPATIBILITY, token.line, "Incompatible type of assigned variable with defined variable");
+        if (search((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, foundToken.data.String)->symbol.type != type) {
+            handle_error(SEMANTIC_TYPE_COMPATIBILITY, foundToken.line, "Incompatible type of assigned variable with defined variable");
         }
     }
 }
@@ -349,11 +368,11 @@ tk_type_t find_varType(parser_t *parser){
         handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "");
 }
 
-void parser_insertVar2symtable(parser_t *parser, bool isLet){
+void parser_insertVar2symtable(parser_t *parser, token_t tmpToken, bool isLet){
     if (parser->scopeDepth > 0) {
-        parser->local_frame->top->symbolTable = insertVar(parser->local_frame->top->symbolTable, parser->current_token, isLet, false);
+        parser->local_frame->top->symbolTable = insertVar(parser->local_frame->top->symbolTable, tmpToken, isLet, false);
     } else {
-        parser->global_frame = insertVar(parser->local_frame->top->symbolTable, parser->current_token, isLet, false);
+        parser->global_frame = insertVar(parser->global_frame, tmpToken, isLet, false);
     }
 }
 
@@ -424,6 +443,55 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
     parser->scopeDepth--;
 }
 
+
+void parseReturn(parser_t *parser, TokenArray *tokenArray) {
+
+    parser->hasReturn = true;
+
+    token_t lookAheadToken = token_lookahead(parser, tokenArray);   
+    
+    if (parser->current_func->symbol.type == TK_KW_NIL){
+        if (isStartOfExpression(lookAheadToken.type) && !lookAheadToken.eol_before){
+            handle_error(SEMANTIC_RETURN_VALUE, parser->current_token.line, "Return in void function cannot have expression");
+        }
+    } else {
+        parser_get_next_token(parser, tokenArray); // Consume the lookAhead token (we must have some kind of expression)
+
+        token_t nextToken = token_lookahead(parser, tokenArray);
+
+        tk_type_t foundType;
+
+        if (parser->current_token.type == TK_IDENTIFIER && nextToken.type == TK_LPAR) {
+            // function call 
+            handle_error(OTHER_SEMANTIC_ERROR, parser->current_token.line, "Return expression cannot be function call!");
+
+        } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))  
+                         || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
+            // Expressions
+            //parser_get_next_token(parser, tokenArray);
+            foundType = rule_expression(parser, *tokenArray);
+            foundType = convert_literal_to_datatype(foundType); // me no like
+        
+        } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
+            if (parser->current_token.type == TK_IDENTIFIER) {
+                // nieco este s INIT
+                foundType = find_varType(parser);
+                
+            } else {
+                // literal
+                foundType = convert_literal_to_datatype(parser->current_token.type);
+                // check ci sedi foundtype s datovym typom prave definovanej premennej alebo prirad ak nema
+            }
+        } else {
+            handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected expression after return statement in non-void function");
+        }
+
+        if (parser->current_func->symbol.type != foundType){
+            handle_error(SEMANTIC_FUNCTION_ARGUMENTS, parser->current_token.line, "Incompatible expression type of return with type of function");
+        }
+
+    }
+}
 
 /* ||||||||||||||||||||||||||||||||| FINSH PARSEFUNCTIONCALL ||||||||||||||||||||||||||||||||*/
 

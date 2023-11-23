@@ -1,4 +1,7 @@
-func r(){
-    let a:Int = 10 + 20
-    let a:Int = 5 + 2
+func r() {
+    let a = 10
+
+    return b
+
+    let b = 10
 }
