@@ -56,12 +56,14 @@ void gen_Label( generator_t* gen, parser_t* parser ) {
 }
 
 void gen_FunctionHeader( generator_t* gen, parser_t* parser ) {
+
+    add_Instruction( &gen->functionName, parser->current_token.data.String );
     
     add_Instruction( &gen->functionHead, "JUMP _skip_" );
-    add_Instruction( &gen->functionHead, parser->current_token.data.String );  //name of function
+    add_Instruction( &gen->functionHead, gen->functionName.data );  //name of function
     add_newLine( &gen->functionHead );
     add_Instruction( &gen->functionHead, "LABEL ");
-    add_Instruction( &gen->functionHead, parser->current_token.data.String );  //name of function
+    add_Instruction( &gen->functionHead, gen->functionName.data );  //name of function
     add_newLine( &gen->functionHead );
     add_Instruction( &gen->functionHead, "CREATEFRAME\n"
                                          "PUSHFRAME\n"
@@ -75,7 +77,7 @@ void gen_FunctionFooter( generator_t* gen, parser_t* parser) {
                                          );
     
     add_Instruction( &gen->functionFoot, "LABEL _skip_" );
-    add_Instruction( &gen->functionFoot, parser->current_token.data.String );  //name of function
+    add_Instruction( &gen->functionFoot, gen->functionName.data );  //name of function
     add_newLine( &gen->functionFoot );
 }
 
@@ -83,7 +85,7 @@ void gen_FunctionCall( generator_t* gen, parser_t* parser ) {
     
     if ( parser->inFunction ) {
         add_Instruction( &gen->functionBody, "CALL ");
-        add_Instruction( &gen->functionBody, parser->current_token.data.String );
+        add_Instruction( &gen->functionBody, parser->current_token.data.String );  //name of called function
         add_newLine( &gen->functionBody );
     } else {
         add_Instruction( &gen->mainBody, "CALL ");
