@@ -14,6 +14,7 @@ authors: xpolia05
 #include "error.h"
 #include "parser.h"
 #include "expr.h"
+#include "generator.h"
 
 TokenArray *initTokenArray() {
     TokenArray *array = malloc(sizeof(TokenArray));

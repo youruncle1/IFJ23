@@ -143,11 +143,11 @@ LABEL _if_done[selectCount]
     
     if ( parser-> inFunction ) {
         add_Instruction( &gen->functionBody, "JUMP _if_done" );
-        add_Int( &gen->functionBody, &gen->selectCount );
+        add_Int( &gen->functionBody, gen->selectCount );
         add_newLine( &gen->functionBody );
     } else {
         add_Instruction( &gen->mainBody, "JUMP _if_done" );
-        add_Int( &gen->mainBody, &gen->selectCount );
+        add_Int( &gen->mainBody, gen->selectCount );
         add_newLine( &gen->mainBody );
     }
  }
@@ -156,11 +156,11 @@ LABEL _if_done[selectCount]
     
     if ( parser-> inFunction ) {
         add_Instruction( &gen->functionBody, "LABEL _if_done" );
-        add_Int( &gen->functionBody, &gen->selectCount );
+        add_Int( &gen->functionBody, gen->selectCount );
         add_newLine( &gen->functionBody );
     } else {
         add_Instruction( &gen->mainBody, "LABEL _if_done" );
-        add_Int( &gen->mainBody, &gen->selectCount );
+        add_Int( &gen->mainBody, gen->selectCount );
         add_newLine( &gen->mainBody );
     }
     //Increment the count of selections to differenriete between other flow control statements
@@ -192,23 +192,23 @@ void gen_While( generator_t* gen, parser_t* parser ) {
     
     if ( parser-> inFunction ) {
         add_Instruction( &gen->functionBody, "LABEL _while_" );
-        add_Int( &gen->functionBody, &gen->iterCount );
+        add_Int( &gen->functionBody, gen->iterCount );
         add_newLine( &gen->functionBody );
         
         //eval expression somehow
         
         add_Instruction( &gen->functionBody, "JUMPIFEQ _while_end_" );
-        add_Int( &gen->functionBody, &gen->iterCount );
+        add_Int( &gen->functionBody, gen->iterCount );
         add_Instruction( &gen->functionBody, " GF@&bool bool@true\n");
     } else {
         add_Instruction( &gen->mainBody, "LABEL _while_" );
-        add_Int( &gen->mainBody, &gen->iterCount );
+        add_Int( &gen->mainBody, gen->iterCount );
         add_newLine( &gen->mainBody );
         
         //eval expression somehow
         
         add_Instruction( &gen->mainBody, "JUMPIFEQ _while_end_" );
-        add_Int( &gen->mainBody, &gen->iterCount );
+        add_Int( &gen->mainBody, gen->iterCount );
         add_Instruction( &gen->mainBody, " GF@&bool bool@true\n");
     }
 }
@@ -219,7 +219,7 @@ void gen_WhileEnd( generator_t* gen, parser_t* parser ) {
         
         //add jump instruction
         add_Instruction( &gen->functionBody, "JUMP _while_" );
-        add_Int( &gen->functionBody, &gen->iterCount );
+        add_Int( &gen->functionBody, gen->iterCount );
         add_newLine( &gen->functionBody );
         
         //add label for while end
@@ -230,7 +230,7 @@ void gen_WhileEnd( generator_t* gen, parser_t* parser ) {
 
         //add jump instruction
         add_Instruction( &gen->mainBody, "JUMP _while_" );
-        add_Int( &gen->mainBody, &gen->iterCount );
+        add_Int( &gen->mainBody, gen->iterCount );
         add_newLine( &gen->mainBody );
         
         //add label for while end
@@ -423,11 +423,11 @@ void gen_Expr( generator_t* gen, ASTNode* node, parser_t* parser ) {
         case TK_IDENTIFIER:
             if ( parser->inFunction ) {
                 add_Instruction( &gen->functionBody, "PUSHS LF@" );
-                add_Instruction( &gen->functionBody, &node->token.data );    //PUSHS LF@name\n
+                add_Instruction( &gen->functionBody, &node->token.data.String );    //PUSHS LF@name\n
                 add_newLine( &gen->functionBody );
             } else {
                 add_Instruction( &gen->mainBody, "PUSHS LF@" );
-                add_Instruction( &gen->mainBody, &node->token.data );    //PUSHS LF@name\n
+                add_Instruction( &gen->mainBody, &node->token.data.String );    //PUSHS LF@name\n
                 add_newLine( &gen->mainBody );
             }
               
