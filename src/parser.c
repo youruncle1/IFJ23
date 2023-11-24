@@ -37,7 +37,7 @@ parser_t initParser(scanner_t *scanner) {
     return parser;
 }
 
-Node *searchFramesVar(parser_t *parser, const char *varName){
+Node *searchFramesVar(parser_t *parser){
     Node *node;
 
     if ((node = stackSearch(parser->local_frame, parser->current_token.data.String)) != NULL) {
@@ -54,6 +54,7 @@ Node *searchFramesVar(parser_t *parser, const char *varName){
     } else {
         handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Undefined variable");
     }
+    return NULL;
 }
 
 void parser_get_next_token(parser_t *parser, TokenArray *tokenArray) {
@@ -70,12 +71,15 @@ void parser_get_next_token(parser_t *parser, TokenArray *tokenArray) {
 void parser_get_previous_token(parser_t *parser, TokenArray *tokenArray) {
 
     if (parser->TKAIndex > 0) {
-        parser->current_token = tokenArray->tokens[--parser->TKAIndex];
+        parser->current_token = tokenArray->tokens[parser->TKAIndex - 2];
+        parser->TKAIndex--;
     } else {
         // should never happen...
         handle_error(INTERNAL_COMPILER_ERROR, 0, "OUT OF TOKENARRAY BOUNDS");
     }
 }
+
+// a == 2 { }
 
 token_t token_lookahead(parser_t *parser, TokenArray *tokenArray) {
     if (parser->TKAIndex < tokenArray->size) {
@@ -84,7 +88,9 @@ token_t token_lookahead(parser_t *parser, TokenArray *tokenArray) {
     } else {
         // should never happen...
         handle_error(INTERNAL_COMPILER_ERROR, 0, "OUT OF TOKENARRAY BOUNDS");
+        return tokenArray->tokens[parser->TKAIndex];;
     }
+    //return tokenArray->tokens[parser->TKAIndex];
 }
 
 void check_next_token(parser_t *parser, TokenArray *tokenArray, tk_type_t expectedType) {
@@ -298,7 +304,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
 
     check_next_token(parser, tokenArray, TK_IDENTIFIER); // Identifier
     token_t tmpToken = parser->current_token;            // ulozeny nazov premmenej
-    tk_type_t tmpType = TK_KW_NIL;                       // ulozeny typ (ak je v definicii typ)
+    //tk_type_t tmpType = TK_KW_NIL;                       // ulozeny typ (ak je v definicii typ)
     tk_type_t foundType = TK_KW_NIL;                     // ulozeny najdeny typ vyrazu
 
     // check ci je uz definovana
@@ -318,7 +324,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected data type");
         }
         // Update type in symbol table
-        tmpType = parser->current_token.type;
+        //tmpType = parser->current_token.type;
         hasType = true;
 
         lookAheadToken = token_lookahead(parser, tokenArray); // Update lookahead token for possible '='
@@ -353,7 +359,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
             // let a = a
             if (parser->current_token.type == TK_IDENTIFIER) {
                 // nieco este s INIT
-                Node *node = searchFramesVar(parser, parser->current_token.data.String);
+                Node *node = searchFramesVar(parser);
 
                 foundType = node->symbol.type;
 
@@ -424,6 +430,7 @@ tk_type_t find_varType(parser_t *parser){
     } else {
         handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "");
     }
+    return TK_KW_NIL;
 }
 
 void parser_insertVar2symtable(parser_t *parser, token_t tmpToken, bool isLet){
@@ -464,7 +471,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
 
             // check ci je init
             check_next_token(parser, tokenArray, TK_IDENTIFIER);
-            letId = searchFramesVar(parser, parser->current_token.data.String);
+            letId = searchFramesVar(parser);
             if (!letId->symbol.isLet){
                 handle_error(OTHER_SEMANTIC_ERROR, parser->current_token.line, "Let id, id is not an immutable variable");
             }
@@ -485,7 +492,9 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
         Node* newScope = NULL;
         push(parser->local_frame, newScope); // Push new empty scope to local frame
 
-        parseBlockContent(parser, tokenArray);
+        while (parser->current_token.type != TK_RBRACE){
+            parseBlockContent(parser, tokenArray);
+        }
 
         check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
@@ -493,9 +502,6 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
 
         check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
         
-        while (parser->current_token.type != TK_RBRACE){
-            parseBlockContent(parser, tokenArray);
-        }
 
         //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
@@ -562,7 +568,7 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray) {
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
             if (parser->current_token.type == TK_IDENTIFIER) {
                 // nieco este s INIT
-                Node *node = searchFramesVar(parser, parser->current_token.data.String);
+                Node *node = searchFramesVar(parser);
 
                 foundType = node->symbol.type;
 
@@ -596,9 +602,9 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray) {
 
     Parameter *parsedParameters = NULL;
     //int *parsedParamCount = 0;
-    token_t *tmpToken; // udrzi nazov
+    //token_t *tmpToken; // udrzi nazov
 
-    parseFunctionCallParams(parser, tokenArray, funcToken, &parsedParameters);
+    parseFunctionCallParams(parser, tokenArray, &parsedParameters);
 
     int parsedParamCount = parser->parsedParamCount;
     //check_next_token(parser, tokenArray, TK_RPAR); uz by mal byt consumed z parseFunctionCallParams
@@ -611,7 +617,7 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray) {
     }
     // checkni parameter count ( ak write tak necheckuj ) - chyba 4
     if (functionNode->symbol.parametersCount != parsedParamCount){
-        if (funcToken.data.String != "write"){
+        if (strcmp(funcToken.data.String, "write") != 0){
             handle_error(SEMANTIC_FUNCTION_ARGUMENTS, parser->current_token.line, "Wrong number of parameters in function call");
             return;
         }
@@ -626,11 +632,59 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray) {
     // func foo(x: Int)
     // foo(with : 10)
     // func(10)
-    for (int i = 0; i < parsedParamCount; i++){
+    if (strcmp(functionNode->symbol.key, "write") == 0) {
+        for (int i = 0; i < parsedParamCount; i++){
+            if (parsedParameters[i].name){
+                handle_error(SEMANTIC_FUNCTION_ARGUMENTS, parser->current_token.line, "Write has no parameter with name");
+            } 
+
+            if (parsedParameters[i].id) {
+                Node *node;
+                if ((node = stackSearch(parser->local_frame, parsedParameters[i].id)) != NULL) {
+                    if (node->symbol.isFunction){
+                        handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable in one of the parameters");
+                    }
+                }
+
+                if (!node) {
+                    if ((node = search(parser->global_frame, parsedParameters[i].id)) != NULL) {
+                        if (node->symbol.isFunction) {
+                            handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable in one of the parameters");
+                        }
+                    }
+                }
+
+                if (!node) {
+                    handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable");
+                }
+            } 
+        } 
+    } else {
+        for (int i = 0; i < parsedParamCount; i++){
 
         if (strcmp(functionNode->symbol.parameters[i].name, "_") != 0){
             if (!parsedParameters[i].name){
                 handle_error(SEMANTIC_FUNCTION_ARGUMENTS, parser->current_token.line, "Missing parameter name in function call");
+            }
+            if (parsedParameters[i].id) {
+                Node *node;
+                if ((node = stackSearch(parser->local_frame, parsedParameters[i].id)) != NULL) {
+                    if (node->symbol.isFunction){
+                        handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable in one of the parameters");
+                    }
+                }
+
+                if (!node) {
+                    if ((node = search(parser->global_frame, parsedParameters[i].id)) != NULL) {
+                        if (node->symbol.isFunction) {
+                            handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable in one of the parameters");
+                        }
+                    }
+                }
+
+                if (!node) {
+                    handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable");
+                }
             }
         }
 
@@ -681,12 +735,15 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray) {
             }
         }
     }
+    }
+    
 
     // NASTAV PARSER->CURRENT_FUNC_CALL NA CHECKNUTIE TYPU PRI ASSIGNMENT
     parser->current_func_call = functionNode;
+    parser->parsedParamCount = 0;
 }
 
-void parseFunctionCallParams(parser_t *parser, TokenArray *tokenArray, token_t funcToken, Parameter **parsedParameters){
+void parseFunctionCallParams(parser_t *parser, TokenArray *tokenArray, Parameter **parsedParameters){
 
     parser_get_next_token(parser, tokenArray);
 
@@ -696,7 +753,7 @@ void parseFunctionCallParams(parser_t *parser, TokenArray *tokenArray, token_t f
     }
 
     while (true) {
-        parseCallParameter(parser, tokenArray, funcToken, parsedParameters);
+        parseCallParameter(parser, tokenArray, parsedParameters);
 
         if (check_token_type(parser, TK_COMMA)) {
             parser_get_next_token(parser,tokenArray);
@@ -710,7 +767,7 @@ void parseFunctionCallParams(parser_t *parser, TokenArray *tokenArray, token_t f
     }
 }
 
-void parseCallParameter(parser_t *parser, TokenArray *tokenArray, token_t funcToken, Parameter **parsedParameters){
+void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **parsedParameters){
     // su len dve moznosti - bud sa najprv najde identifier alebo literal (tk_int, tk_double, tk_string, tk_mlstring) - inak syntax error
     // TOK 1:
     // najde sa identifier
@@ -813,7 +870,7 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray){
 
     token_t tmpToken = parser->current_token; // should hold name of variable, for usage in updateInit
 
-    Node *node = searchFramesVar(parser, parser->current_token.data.String);
+    Node *node = searchFramesVar(parser);
 
     if (node->symbol.isFunction){
         handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Left side of the assignment is an function name, not a variable");
@@ -825,7 +882,7 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray){
 
     tk_type_t leftType = node->symbol.type;
     tk_type_t foundType;
-    bool isInit = node->symbol.isInit; // needed?
+    //bool isInit = node->symbol.isInit; // needed?
 
     // left hand check done
     // right hand check
@@ -850,7 +907,7 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray){
 
         if (parser->current_token.type == TK_IDENTIFIER) {
 
-            Node *node = searchFramesVar(parser, parser->current_token.data.String);
+            Node *node = searchFramesVar(parser);
             foundType = node->symbol.type; // should deal with if function
 
             if (!node->symbol.isInit){

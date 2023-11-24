@@ -378,7 +378,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray){
         if (stack->top->itemType == AST_NODE_TYPE && stack->size == 2 &&
             precedence == '>'){
             result = stack->top->data.node->resultType;
-            parser_get_previous_token(parser, tokenArray);
+            //parser_get_previous_token(parser, tokenArray);
             parser_get_previous_token(parser, tokenArray);
             return result;
             }

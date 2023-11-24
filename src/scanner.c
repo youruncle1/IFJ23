@@ -62,7 +62,6 @@ token_t get_token(scanner_t *scanner) {
     
     char symb;
     int nested_comment_count = 0;
-    int whtespce_count = 0;
     int closing_delimiter_indentation = 0;
     int unicode_val, hex_digits_count;
     bool mlstring = false;
@@ -149,6 +148,7 @@ token_t get_token(scanner_t *scanner) {
                     break;
                 }
                 handle_error(LEXICAL_ERROR, scanner->line, "Unsupported symbol found");
+                return token;
             }
 
             case STRING_TYPE: {
@@ -440,12 +440,13 @@ token_t get_token(scanner_t *scanner) {
             case IDENTIFIER_TYPE: {
                 ungetc(symb, scanner->input);  // Already got ?, current symbol is from different token
                 char* identifier_str = buffer_to_string(&scanner->buffer);
+                token_t token;
                 if (strcmp(identifier_str, "Double?") == 0) {
-                    token_t token = create_token(TK_KW_DOUBLE_OPT, scanner->line, eol_before);
+                    token = create_token(TK_KW_DOUBLE_OPT, scanner->line, eol_before);
                 } else if (strcmp(identifier_str, "Int?") == 0) {
-                    token_t token = create_token(TK_KW_INT_OPT, scanner->line, eol_before);
+                    token = create_token(TK_KW_INT_OPT, scanner->line, eol_before);
                 } else if (strcmp(identifier_str, "String?") == 0) {
-                    token_t token = create_token(TK_KW_STRING_OPT, scanner->line, eol_before);
+                        token = create_token(TK_KW_STRING_OPT, scanner->line, eol_before);
                 } else {
                     handle_error(LEXICAL_ERROR, scanner->line, "Unknown optional type, did you mean: Double? / String? / Int?");
                 }
