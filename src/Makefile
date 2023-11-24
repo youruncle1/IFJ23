@@ -8,7 +8,7 @@ CFLAGS=-Wall -g -Wextra -pedantic
 OBJ=main.o scanner.o string.o error.o symtable.o expr.o parser.o
 
 # Define the executable file
-EXEC=program
+EXEC=ifj23
 
 # Linking rule
 $(EXEC): $(OBJ)

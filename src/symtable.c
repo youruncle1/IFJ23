@@ -55,7 +55,7 @@ Node *insertFunc(Node *root, token_t token){
     Node *found = search(root, token.data.String);
 
     if (found != NULL){
-        handle_error(OTHER_SEMANTIC_ERROR, 0, "Function redefinition error");
+        handle_error(SEMANTIC_UNDEFINED_FUNCTION, 0, "Function redefinition error");
     }
 
     Symbol *symbol = initSymbol(token.data.String, TK_KW_NIL, false, false, true); // initialize with NIL(return type yet unknown)
