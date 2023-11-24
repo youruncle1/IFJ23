@@ -99,7 +99,8 @@ ASTNode *parse_binary(Stack *stack, parser_t *parser);
 ASTNode *parse_par(Stack *stack, parser_t *parser);
 ASTNode *parse_expression(Stack *stack, parser_t *parser);
 int get_precedence(token_t top, token_t current);
-tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray);
+tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray);
 tk_type_t typeOf_ID(parser_t * parser, char* String);
 
+tk_type_t expr_convert_literal_to_datatype(tk_type_t tokenType);
 #endif

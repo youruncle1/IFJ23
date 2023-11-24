@@ -18,11 +18,11 @@ const char Precedence_table[TABLE_SIZE][TABLE_SIZE] = {
     /* ?? */ {'E', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
     /* ( */  {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '=', '<', '<', '<', '<', '<', '>'},
     /* ) */  {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', 'E', 'E', 'E', 'E', '>'},
-    /* INT */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
-    /* ID  */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
-    /* DBL */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
-    /* STR */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
-    /* NIL */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
+    /* INT */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
+    /* ID  */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
+    /* DBL */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
+    /* STR */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
+    /* NIL */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
     /* $  */ {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '='},
 };
 
@@ -124,11 +124,11 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
 
     if (node->left->token.type == TK_IDENTIFIER)
     {
-        leftType = typeOf_ID(parser, node->left->token.data.String);
+        leftType = expr_convert_literal_to_datatype(typeOf_ID(parser, node->left->token.data.String));
     }
     if (node->right->token.type == TK_IDENTIFIER)
     {
-        rightType = typeOf_ID(parser, node->right->token.data.String);
+        rightType = expr_convert_literal_to_datatype(typeOf_ID(parser, node->right->token.data.String));
     }
 
 
@@ -341,8 +341,20 @@ int get_precedence(token_t top, token_t current) {
     }
     return Precedence_table[top.type][current.type];
 }
+tk_type_t expr_convert_literal_to_datatype(tk_type_t tokenType){
+    switch (tokenType) {
+        case TK_KW_INT:
+            return TK_INT;
+        case TK_KW_STRING:
+            return TK_STRING;
+        case TK_KW_DOUBLE:
+            return TK_DOUBLE;
+        default:
+            return tokenType;
+    }
+}
 
-tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
+tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray){
     Stack *stack= (Stack*)malloc(sizeof(Stack));
     stack_init(stack);
     Stack *expr= (Stack*)malloc(sizeof(Stack));
@@ -358,7 +370,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
         StackItem *Item;
         
         // checks if current token is out of expresion
-        if (precedence == 'E' && parser->current_token.eol_before == true)
+        if (precedence == 'E' && (parser->current_token.eol_before == true || parser->current_token.type == TK_LBRACE))
         {
             precedence = '>';
         }
@@ -366,7 +378,8 @@ tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
         if (stack->top->itemType == AST_NODE_TYPE && stack->size == 2 &&
             precedence == '>'){
             result = stack->top->data.node->resultType;
-            parser_get_previous_token(parser, &tokenArray);
+            parser_get_previous_token(parser, tokenArray);
+            parser_get_previous_token(parser, tokenArray);
             return result;
             }
 
@@ -374,7 +387,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
         switch (precedence){
             case '=':
                 stack_push_token(stack,parser->current_token);
-                parser_get_next_token(parser,&tokenArray);
+                parser_get_next_token(parser,tokenArray);
                 break;
             case '>':
                 while (1) {
@@ -401,7 +414,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
             case '<':
                 stack_push_after_terminal(stack , start);
                 stack_push_token(stack, parser->current_token);
-                parser_get_next_token(parser, &tokenArray);
+                parser_get_next_token(parser, tokenArray);
 
                 break;
             case 'E':

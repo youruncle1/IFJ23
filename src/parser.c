@@ -70,8 +70,7 @@ void parser_get_next_token(parser_t *parser, TokenArray *tokenArray) {
 void parser_get_previous_token(parser_t *parser, TokenArray *tokenArray) {
 
     if (parser->TKAIndex > 0) {
-        parser->current_token = tokenArray->tokens[parser->TKAIndex];
-        parser->TKAIndex--;
+        parser->current_token = tokenArray->tokens[--parser->TKAIndex];
     } else {
         // should never happen...
         handle_error(INTERNAL_COMPILER_ERROR, 0, "OUT OF TOKENARRAY BOUNDS");
@@ -336,12 +335,13 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
         if (parser->current_token.type == TK_IDENTIFIER && nextToken.type == TK_LPAR) {
             // Function call
             parseFunctionCall(parser, tokenArray);
+            foundType = parser->current_func_call->symbol.type;
 
         } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))
                    || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
             // Expressions
             //parser_get_next_token(parser, tokenArray);
-            foundType = rule_expression(parser, *tokenArray);
+            foundType = rule_expression(parser, tokenArray);
             foundType = convert_literal_to_datatype(foundType); // me no like
 
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
@@ -360,14 +360,10 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
                 if (!node->symbol.isInit){
                     handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Assigning an uninitialized variable");
                 }
-
-
-
             } else {
                 // literal
                 foundType = convert_literal_to_datatype(parser->current_token.type);
                 // check ci sedi foundtype s datovym typom prave definovanej premennej alebo prirad ak nema
-
             }
         } else {
             handle_error(SYNTAX_ERROR, parser->current_token.line, "SYNTAX ERROR IN VARIABLE DEFINITION");
@@ -454,14 +450,34 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
 
     parser->scopeDepth++;
 
+    tk_type_t foundType;
+    Node *letId;
+    //token_t lookAheadToken;
+
     if (parser->current_token.type == TK_KW_IF) {
         parser_get_next_token(parser, tokenArray); // Get token after 'if'
 
         if (parser->current_token.type == TK_KW_LET) {
             // TU_SEMANTIKA
             // dokoncit semantiku pre let id variaciu
+            // rip nil 2023-2023
+
+            // check ci je init
+            check_next_token(parser, tokenArray, TK_IDENTIFIER);
+            letId = searchFramesVar(parser, parser->current_token.data.String);
+            if (!letId->symbol.isLet){
+                handle_error(OTHER_SEMANTIC_ERROR, parser->current_token.line, "Let id, id is not an immutable variable");
+            }
+
         } else {
-            //parseExpression(parser, tokenArray); // Parse the conditional expression
+            // lookAheadToken = token_lookahead(parser, tokenArray);
+            // if (!isStartOfExpression(parser->current_token.type) || !isPartOfExpression(lookAheadToken.type)){
+            //     handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected expression or Let id in if statement");
+            // }
+            foundType = rule_expression(parser, tokenArray); // Parse the conditional expression
+            if (foundType != TK_BOOLEAN){
+                handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Expected boolean in if statement");
+            }
         }
 
         check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
@@ -473,28 +489,37 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
 
         check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
-        // Optional 'else' part
-        if (token_lookahead(parser, tokenArray).type == TK_KW_ELSE) {
-            parser_get_next_token(parser, tokenArray); // Consume 'else'
+        check_next_token(parser, tokenArray, TK_KW_ELSE);
 
-            check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
-
+        check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
+        
+        while (parser->current_token.type != TK_RBRACE){
             parseBlockContent(parser, tokenArray);
-
-            check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
         }
+
+        //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
     } else if (parser->current_token.type == TK_KW_WHILE) {
         parser_get_next_token(parser, tokenArray); // Get token after 'while'
 
-        //parseExpression(parser, tokenArray); // Parse the conditional expression
+        // start start ( 10
+        // start part 
+        // if (isStartOfExpression(parser->current_token.type) || !isPartOfExpression(lookAheadToken.type)){
+        //     handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected expression while statement");
+        // }
+        foundType = rule_expression(parser, tokenArray); // Parse the conditional expression
+        if (foundType != TK_BOOLEAN){
+            handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Expected boolean in while statement");
+        }
 
         check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
         Node* newScope = NULL;
         push(parser->local_frame, newScope); // Push new empty scope to local frame
 
-        parseBlockContent(parser, tokenArray);
+        while (parser->current_token.type != TK_RBRACE){
+            parseBlockContent(parser, tokenArray);
+        }
 
         check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
@@ -531,7 +556,7 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray) {
                    || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
             // Expressions
             //parser_get_next_token(parser, tokenArray);
-            foundType = rule_expression(parser, *tokenArray);
+            foundType = rule_expression(parser, tokenArray);
             foundType = convert_literal_to_datatype(foundType); // me no like
 
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
@@ -812,12 +837,13 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray){
     if (parser->current_token.type == TK_IDENTIFIER && nextToken.type == TK_LPAR) {
         // Function call
         parseFunctionCall(parser, tokenArray);
+        foundType = parser->current_func_call->symbol.type;
 
     } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))
                || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
         // Expressions
         //parser_get_next_token(parser, tokenArray);
-        foundType = rule_expression(parser, *tokenArray);
+        foundType = rule_expression(parser, tokenArray);
         foundType = convert_literal_to_datatype(foundType); // me no like
 
     } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {

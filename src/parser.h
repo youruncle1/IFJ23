@@ -69,4 +69,5 @@ Node *searchFramesVar(parser_t *parser, const char *varName);
 // toto by bolo najlepsie nepouzivat a prerobit spravne exprparser...
 tk_type_t convert_literal_to_datatype(tk_type_t tokenType);
 
+
 #endif
