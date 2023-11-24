@@ -236,10 +236,244 @@ void gen_WhileEnd( generator_t* gen, parser_t* parser ) {
         add_Int( &gen->mainBody, gen->iterCount );
         add_newLine( &gen->mainBody );
     }
+    gen->iterCount++;
 }
 
-void gen_Expr( generator_t* gen/*, ASTNode* node */) {
+void convert_Type( generator_t* gen, ASTNode* node, ASTNode* childNode, parser_t* parser ) {
+
+    if ( childNode->token.type != node->resultType && node->resultType == TK_DOUBLE ) {
+        if ( parser->inFunction ) {
+            add_Instruction( &gen->functionBody, "CALL Int2Double\n" );
+        } else {
+            add_Instruction( &gen->mainBody, "CALL Int2Double\n" );
+        }
+    } else if ( childNode->token.type != node->resultType && node->resultType == TK_INT ) {
+        if ( parser->inFunction ) {
+            add_Instruction( &gen->functionBody, "CALL Double2Int\n" );
+        } else {
+            add_Instruction( &gen->mainBody, "CALL Double2Int\n" );
+        }
+    }
+}
+
+void boolian_convert_Type( generator_t* gen, ASTNode* node, parser_t* parser ) {
+
+    if ( node->left->token.type == node->right->token.type ) {
+        return;
+    } else if ( node->left->token.type == TK_DOUBLE ) {
+        if ( parser->inFunction ) {
+            add_Instruction( &gen->functionBody, "CALL Int2Double\n" );
+        } else {
+            add_Instruction( &gen->mainBody, "CALL Int2Double\n" );
+        }
+    } else {
+        if ( parser->inFunction ) {
+            add_Instruction( &gen->functionBody, "CALL Double2Int\n" );
+        } else {
+            add_Instruction( &gen->mainBody, "CALL Double2Int\n" );
+        }
+    }
+}
+
+void gen_Expr( generator_t* gen, ASTNode* node, parser_t* parser ) {
     
+    if ( node == NULL ) return;
+
+    switch( node->token.type ) {
+        case TK_PLUS:
+            gen_Expr( gen, node->left, parser );
+            convert_Type( gen, node, node->left, parser );
+            
+            gen_Expr( gen, node->right, parser );
+            convert_Type( gen, node, node->right, parser );
+            
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "ADDS\n" );
+            } else {
+                add_Instruction( &gen->mainBody, "ADDS\n" );
+            }
+
+        case TK_MINUS:
+            gen_Expr( gen, node->left, parser );
+            convert_Type( gen, node, node->left, parser );
+
+            gen_Expr( gen, node->right, parser );
+            convert_Type( gen, node, node->right, parser );
+
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "SUBS\n" );
+            } else {
+                add_Instruction( &gen->mainBody, "SUBS\n" );
+            }
+
+        case TK_MUL:
+            gen_Expr( gen, node->left, parser );
+            convert_Type( gen, node, node->left, parser );
+
+            gen_Expr( gen, node->right, parser );
+            convert_Type( gen, node, node->right, parser );
+
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "MULS\n" );
+            } else {
+                add_Instruction( &gen->mainBody, "MULS\n" );
+            }
+
+        case TK_DIV:
+            gen_Expr( gen, node->left, parser );
+            convert_Type( gen, node, node->left, parser );
+
+            gen_Expr( gen, node->right, parser );
+            convert_Type( gen, node, node->right, parser );
+
+            if ( node->left->token.type == TK_INT && node->left->token.type == TK_INT ) {  //  aky je rozfiel medzy node->left.token.type a node->resultType??  (node->left.token.type je type tokenu co obsahuje napr priamo konstantu node->resultType je podla semantiky co bi malo byt vysledkom tej operacii
+            //Operandy su double
+                if ( parser->inFunction ) {
+                    add_Instruction( &gen->functionBody, "IDIVS\n" );
+                } else {
+                    add_Instruction( &gen->mainBody, "IDIVS\n" );
+                }    
+            } else {
+            //Operandy su int
+                if ( parser->inFunction ) {
+                    add_Instruction( &gen->functionBody, "DIVS\n" );
+                } else {
+                    add_Instruction( &gen->mainBody, "DIVS\n" );
+                }
+            }
+
+        case TK_EQ:
+            gen_Expr( gen, node->left, parser );
+            gen_Expr( gen, node->right, parser );
+            boolian_convert_Type( gen, node, parser );
+
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "EQS\n" );
+                add_Instruction( &gen->functionBody, "POPS GF@&bool\n");            // pop the result in GF@&bool to use in comparisons 
+            } else {
+                add_Instruction( &gen->mainBody, "EQS\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@&bool\n" );               // pop the result in GF@&bool to use in comparisons
+            }
+
+        case TK_NEQ:
+            gen_Expr( gen, node->left, parser );
+            gen_Expr( gen, node->right, parser );
+            boolian_convert_Type( gen, node, parser );
+
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "EQS\n" );
+                add_Instruction( &gen->functionBody, "POPS GF@&bool\n" );
+                add_Instruction( &gen->functionBody, "NOT GF@&bool\n" );
+            } else {
+                add_Instruction( &gen->mainBody, "EQS\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@&bool\n" );
+                add_Instruction( &gen->mainBody, "NOT GF@&bool\n" );
+            }
+
+        case TK_LT:
+            gen_Expr( gen, node->left, parser );
+            gen_Expr( gen, node->right, parser );
+            boolian_convert_Type( gen, node, parser );
+
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "LTS\n" );
+                add_Instruction( &gen->functionBody, "POPS GF@&bool\n" );
+            } else {
+                add_Instruction( &gen->mainBody, "LTS\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@&bool\n" );
+            }
+
+        case TK_GT:
+            gen_Expr( gen, node->left, parser );
+            gen_Expr( gen, node->right, parser );
+            boolian_convert_Type( gen, node, parser );
+
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "GTS\n" );
+                add_Instruction( &gen->functionBody, "POPS GF@&bool\n");            // pop the result in GF@&bool to use in comparisons 
+            } else {
+                add_Instruction( &gen->mainBody, "GTS\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@&bool\n" );               // pop the result in GF@&bool to use in comparisons
+            }
+
+        case TK_LE:
+            gen_Expr( gen, node->left, parser );
+            gen_Expr( gen, node->right, parser );
+            boolian_convert_Type( gen, node, parser );
+
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "CALL _LE\n" );
+            } else {
+                add_Instruction( &gen->mainBody, "CALL _LE\n" );
+            }
+
+        case TK_GE:
+            gen_Expr( gen, node->left, parser );
+            gen_Expr( gen, node->right, parser );
+            boolian_convert_Type( gen, node, parser );
+
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "CALL _GE\n" );
+            } else {
+                add_Instruction( &gen->mainBody, "CALL _GE\n" );
+            }
+
+        case TK_IDENTIFIER:
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "PUSHS LF@" );
+                add_Instruction( &gen->functionBody, &node->token.data );    //PUSHS LF@name\n
+                add_newLine( &gen->functionBody );
+            } else {
+                add_Instruction( &gen->mainBody, "PUSHS LF@" );
+                add_Instruction( &gen->mainBody, &node->token.data );    //PUSHS LF@name\n
+                add_newLine( &gen->mainBody );
+            }
+              
+        case TK_DOUBLE:        // double literal
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "PUSHS float@" );
+                add_Instruction( &gen->functionBody, &node->token.data.Double );
+                add_newLine( &gen->functionBody );
+            } else {
+                add_Instruction( &gen->mainBody, "PUSHS float@" );
+                add_Instruction( &gen->mainBody, &node->token.data.Double );
+                add_newLine( &gen->mainBody );
+            }
+        case TK_INT:           // integer literal
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "PUSHS int@" );
+                add_Instruction( &gen->functionBody, &node->token.data.Int );
+                add_newLine( &gen->functionBody );
+            } else {
+                add_Instruction( &gen->mainBody, "PUSHS int@" );
+                add_Instruction( &gen->mainBody, &node->token.data.Int );
+                add_newLine( &gen->mainBody );
+            }
+        case TK_STRING:        // string literal
+        case TK_MLSTRING:      // multi-line string literal
+            if ( parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "PUSHS string@" );
+                add_Instruction( &gen->functionBody, &node->token.data.String );
+                add_newLine( &gen->functionBody );
+            } else {
+                add_Instruction( &gen->mainBody, "PUSHS string@" );
+                add_Instruction( &gen->mainBody, &node->token.data.String );
+                add_newLine( &gen->mainBody );
+            }
+
+        case TK_COALESCE:
+            gen_Expr( gen, node->right, parser );
+            gen_Expr( gen, node->left, parser );
+            
+            if (parser->inFunction ) {
+                add_Instruction( &gen->functionBody, "CALL _COALESCE\n" );
+            } else {
+                add_Instruction( &gen->mainBody, "CALL _COALESCE\n" );
+            }
+
+        default:
+            break;
+    }
 }
 
 void print_Code(generator_t* gen){
@@ -248,7 +482,73 @@ void print_Code(generator_t* gen){
     print_Intructions(&gen->mainBody);
 }
 
+void gen_COALESCE( generator_t* gen ) {
+    add_Instruction( &gen->functions, "JUMP _skip_COALESCE\n"
+                                      "LABEL _COALESCE\n"
+                                      "CREATEFRAME\n"
+                                      "PUSHFRAME\n"
+                                      "DEFVAR LF@left\n"
+                                      "DEFVAR LF@right\n"
+                                      "POPS LF@left\n"
+                                      "JUMPIFEQ ?is_nil LF@left nil@nil\n"
+                                      "POPS LF@right\n"
+                                      "PUSHS LF@left\n"  
+                                      "LABEL ?is_nil\n"
+                                      "POPFRAME\n"
+                                      "RETURN\n"
+                                      "LABEL _skip_COALESCE\n" 
+                                        );
+}
 
+void gen_LE( generator_t* gen ) {
+    add_Instruction( &gen->functions, "JUMP _skip_LE\n"
+                                      "LABEL _LE\n" 
+                                      "CREAFRAME\n"
+                                      "PUSHFRAME\n"
+                                      "DEFVAR LF@right\n"
+                                      "DEFVAR LF@left\n"
+                                      "DEFVAR LF@result\n"
+                                      "POPS LF@right\n"
+                                      "POPS LF@left\n"
+                                      "LT LF@result LF@left LF@right\n"
+                                      "JUMPIFEQ ?is_false LF@result bool@false\n"
+                                      "EQ LF@result LF@left LF@right\n"
+                                      "JUMPIFEQ ?is_false LF@result bool@false\n"
+                                      "MOVE GF@&bool bool@true\n"
+                                      "JUMP ?end_LE\n"
+                                      "label ?is_false\n"
+                                      "MOVE GF@&bool bool@false\n"
+                                      "LABEL ?end_LE\n"
+                                      "POPFRAME\n"
+                                      "RETURN\n"
+                                      "LABEL _skip_LE\n"
+                                      );
+}
+
+void gen_GE( generator_t* gen ) {
+    add_Instruction( &gen->functions, "JUMP _skip_GE\n"
+                                      "LABEL _GE\n" 
+                                      "CREAFRAME\n"
+                                      "PUSHFRAME\n"
+                                      "DEFVAR LF@right\n"
+                                      "DEFVAR LF@left\n"
+                                      "DEFVAR LF@result\n"
+                                      "POPS LF@right\n"
+                                      "POPS LF@left\n"
+                                      "GT LF@result LF@left LF@right\n"
+                                      "JUMPIFEQ ?is_false LF@result bool@false\n"
+                                      "EQ LF@result LF@left LF@right\n"
+                                      "JUMPIFEQ ?is_false LF@result bool@false\n"
+                                      "MOVE GF@&bool bool@true\n"
+                                      "JUMP ?end_GE\n"
+                                      "label ?is_false\n"
+                                      "MOVE GF@&bool bool@false\n"
+                                      "LABEL ?end_GE\n"
+                                      "POPFRAME\n"
+                                      "RETURN\n"
+                                      "LABEL _skip_GE\n"
+                                      );
+}
 
 /*
 ##########################################################################################################

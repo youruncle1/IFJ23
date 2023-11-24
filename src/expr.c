@@ -185,7 +185,7 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
             }
             break;
-        case TK_COALESCE:
+        case TK_COALESCE:           //TODO opravit chybu. Ak je leftType nil, tak node->resultTyle = rigthType
             if (leftType != TK_KW_NIL) {
                 node->resultType = leftType;
                 return 0;

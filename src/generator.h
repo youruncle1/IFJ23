@@ -4,7 +4,7 @@
 #include "scanner.h"
 #include "instructions.h"
 #include "parser.h"
-// #include "expr.h"        //Tu bude includovany expression parser ktory bude mat ASS
+#include "expr.h"        //Tu bude includovany expression parser ktory bude mat ASS
 
 
 typedef struct{
