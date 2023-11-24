@@ -4,25 +4,25 @@
 
 const char Precedence_table[TABLE_SIZE][TABLE_SIZE] = {
     //         !    *    /    +    -    <   <=    >    >=   ==  !=    ??   (    )    ID  INT  DBL  STR  NIL   $   [riadky][stlpce]
-    /* * */  {'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* ! */  {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '<', '<', '<', '>'},
-    /* / */  {'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* + */  {'<', '<', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* - */  {'<', '<', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* < */  {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* <= */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* > */  {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* >= */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* == */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* != */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* ?? */ {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* ( */  {'<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '=', '>', '<', '<', '<', '<', '>'},
-    /* ) */  {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '<', '<', '<', '>'},
-    /* ID  */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* INT */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* DBL */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* STR */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
-    /* NIL */{'<', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '<', '<', '<', '>'},
+    /* ! */  {'E', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>'},
+    /* + */  {'E', '<', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* / */  {'E', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* - */  {'E', '<', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* * */  {'E', '>', '>', '>', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* < */  {'E', '<', '<', '<', '>', 'E', 'E', 'E', 'E', 'E', 'E', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* <= */ {'E', '<', '<', '<', '>', 'E', 'E', 'E', 'E', 'E', 'E', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* > */  {'E', '<', '<', '<', '>', 'E', 'E', 'E', 'E', 'E', 'E', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* >= */ {'E', '<', '<', '<', '>', 'E', 'E', 'E', 'E', 'E', 'E', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* == */ {'E', '<', '<', '<', '>', 'E', 'E', 'E', 'E', 'E', 'E', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* != */ {'E', '<', '<', '<', '>', 'E', 'E', 'E', 'E', 'E', 'E', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* ?? */ {'E', '<', '<', '<', '>', '<', '<', '<', '<', '<', '<', '<', '<', '>', '<', '<', '<', '<', '<', '>'},
+    /* ( */  {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '=', '<', '<', '<', '<', '<', '>'},
+    /* ) */  {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', 'E', 'E', 'E', 'E', '>'},
+    /* INT */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
+    /* ID  */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
+    /* DBL */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
+    /* STR */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
+    /* NIL */{'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', 'E', '>', 'E', 'E', 'E', 'E', 'E', '>'},
     /* $  */ {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '='},
 };
 
@@ -134,6 +134,15 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
 
     switch (node->token.type) {
         case TK_PLUS:
+            if (leftType == TK_STRING && rightType == TK_STRING) 
+            {
+                node->resultType = TK_STRING;
+                return 0;
+            } else if ((leftType == TK_STRING || rightType == TK_STRING) &&
+                       leftType != rightType)
+            {
+                handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
+            }
         case TK_MINUS:
         case TK_MUL:
             if ((leftType == TK_DOUBLE || leftType == TK_INT) &&
@@ -199,6 +208,7 @@ ASTNode *create_node(token_t token, ASTNodeType type) {
         exit(EXIT_FAILURE);
     }
     node->type = type;
+    node->resultType = type;
     node->token = token;
     return node;
 }
@@ -207,9 +217,16 @@ ASTNode *parse_non_terminal(token_t token){
 }
 
 ASTNode *parse_unary(Stack *stack){
-    
-    ASTNode *node = create_node(stack->top->next_item->data.token, AST_UNARY_OP);
-    node->left = parse_non_terminal(stack->top->data.token);
+    ASTNode *right;
+    if (stack->top->itemType == AST_NODE_TYPE)
+    {
+        right = stack_pop(stack)->data.node;    
+    } else
+        right = parse_non_terminal(stack_pop(stack)->data.token);
+    token_t op = stack_pop(stack)->data.token;
+    ASTNode *node = create_node(op, AST_UNARY_OP);
+    node->resultType = right->resultType;
+    node->right = right;
     return node;
 }
 tk_type_t typeOf_ID(parser_t * parser, char* String){
@@ -228,27 +245,31 @@ ASTNode *parse_binary(Stack *stack, parser_t *parser){
     ASTNode *left;
     if (stack->top->itemType == AST_NODE_TYPE)
     {
-        right = stack_pop(stack)->data.node;    
-    } else
-        right = parse_non_terminal(stack_pop(stack)->data.token);
-    token_t op = stack->top->data.token;
-    stack_pop(stack);
-
-    ASTNode *node = create_node(op, AST_BINARY_OP);
-    if (stack->top->itemType == AST_NODE_TYPE)
-    {
         left = stack_pop(stack)->data.node;    
     } else
         left = parse_non_terminal(stack_pop(stack)->data.token);
+
+
+    
+    // Opperator
+    token_t op = stack_pop(stack)->data.token;
+    ASTNode *node = create_node(op, AST_BINARY_OP);
+    
+    if (stack->top->itemType == AST_NODE_TYPE)
+    {
+        right = stack_pop(stack)->data.node;    
+    } else
+        right = parse_non_terminal(stack_pop(stack)->data.token);
+
     node->right = right;
     node->left = left;
     performSemanticCheck(node,parser);
     
     return node;
 }
-ASTNode *parse_par(Stack *stack){
+ASTNode *parse_par(Stack *stack, parser_t *parser){
     ASTNode *node;
-    if (stack->top->data.token.type != TK_RPAR)
+    if (stack->top->data.token.type != TK_LPAR)
     {
         // Error
         handle_error(SYNTAX_ERROR,stack->top->data.token.line, "Expression");
@@ -263,7 +284,7 @@ ASTNode *parse_par(Stack *stack){
         node = stack->top->data.node;
         stack_pop(stack);
     }
-    if (stack->top->data.token.type != TK_LPAR)
+    if (stack->top->data.token.type != TK_RPAR)
     {
         /* Error */
         handle_error(SYNTAX_ERROR,stack->top->data.token.line, "Expression");
@@ -285,7 +306,7 @@ ASTNode *parse_expression(Stack *stack, parser_t *parser) {
         }
     } else if (stack->size == 2)
     {
-        if ((stack->top->data.token.type >= TK_IDENTIFIER && stack->top->data.token.type <= TK_MLSTRING) && (stack->top->next_item->data.token.type == TK_UNWRAP))
+        if (stack->top->next_item->itemType == TOKEN_TYPE && (stack->top->next_item->data.token.type == TK_UNWRAP))
         {
             ASTNode *node = parse_unary(stack);
             return node;
@@ -302,7 +323,12 @@ ASTNode *parse_expression(Stack *stack, parser_t *parser) {
          {
             ASTNode *node = parse_binary(stack, parser);
             return node;
+         } else if (stack->top->itemType == TOKEN_TYPE && stack->top->data.token.type == TK_LPAR)
+         {
+            ASTNode *node = parse_par(stack, parser);
+            return node;
          }
+         
          
     }
     
@@ -330,10 +356,18 @@ tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
     while (true) {
         int precedence = get_precedence(stack_top_terminal(stack->top), parser->current_token);
         StackItem *Item;
-
+        
+        // checks if current token is out of expresion
+        if (precedence == 'E' && parser->current_token.eol_before == true)
+        {
+            precedence = '>';
+        }
+        
         if (stack->top->itemType == AST_NODE_TYPE && stack->size == 2 &&
             precedence == '>'){
-            return stack->top->data.node->resultType;
+            result = stack->top->data.node->resultType;
+            parser_get_previous_token(parser, &tokenArray);
+            return result;
             }
 
 
@@ -370,6 +404,8 @@ tk_type_t rule_expression(parser_t *parser, TokenArray tokenArray){
                 parser_get_next_token(parser, &tokenArray);
 
                 break;
+            case 'E':
+                handle_error(SYNTAX_ERROR,stack->top->data.token.line, "Expression");
             default:
                 break;
         }
