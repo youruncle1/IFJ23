@@ -371,6 +371,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray){
     token_t dollar = create_token(TK_DOLLAR,0,0);
     token_t start = create_token(TK_LEFT,0,0);
     tk_type_t result;
+    bool endOfExpre = false;
     stack_push_token(stack, dollar);
     
 
@@ -381,9 +382,11 @@ tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray){
         // checks if current token is out of expresion
         if (precedence == 'E' && (parser->current_token.eol_before == true || parser->current_token.type == TK_LBRACE))
         {
-            precedence = '>';
+            endOfExpre = true;
         }
-        
+        if(endOfExpre)
+            precedence = '>';
+            
         if (stack->top->itemType == AST_NODE_TYPE && stack->size == 2 &&
             precedence == '>'){
             result = stack->top->data.node->resultType;
