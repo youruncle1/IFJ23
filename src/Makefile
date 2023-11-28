@@ -26,8 +26,8 @@ error.o: error.c error.h
 symtable.o: symtable.c symtable.h
 expr.o: expr.c expr.h
 parser.o: parser.c parser.h
-generator.o generator.c generator.h
-instructions.o instructions.c instructions.h
+generator.o: generator.c generator.h
+instructions.o: instructions.c instructions.h
 
 # Clean rule
 clean:

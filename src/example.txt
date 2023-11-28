@@ -1,7 +1,5 @@
 var a = 5
-var b = 5
-var c : Int
-
-c = a + b
-
-write(a)
+var b = 6
+if (a <= b) {
+    write(9)
+}

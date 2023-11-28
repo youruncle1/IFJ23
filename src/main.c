@@ -1,4 +1,5 @@
 #include "scanner.h"
+#include "generator.h"
 #include "parser.h"
 #include "symtable.h" // Assuming this is the name of your symbol table header file
 
@@ -59,6 +60,8 @@ int main() {
     scanner.input = stdin; 
     scanner.line = 1;
 
+    generator_t gen = gen_Init();
+
     parser_t parser = initParser(&scanner);
 
     define_builtin_functions(&parser.global_frame);
@@ -67,12 +70,16 @@ int main() {
 
     firstParserPass(&parser, tokenArray);
 
-    printTokenArray(tokenArray);
+    // printTokenArray(tokenArray);
 
     printf("\nSymbol Table (Inorder Traversal):\n");
-    inOrder(parser.global_frame);
+    // inOrder(parser.global_frame);
 
-    parseProgram(&parser,tokenArray);
+    gen_Header(&gen);
+    gen_inbuild(&gen);
+    parseProgram(&parser,tokenArray, &gen);
+
+    print_Code(&gen);
 
     return 0;
 }
