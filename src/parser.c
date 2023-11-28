@@ -219,6 +219,8 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator
 
     parser_get_next_token(parser, tokenArray);                        // Identifier
 
+    gen_FunctionHeader( gen, parser->current_token.data.String );
+
     parser->current_func = search(parser->global_frame, parser->current_token.data.String);
 
     setupFunctionScope(parser, parser->current_token.data.String);    // <parameter_list> Local frame setup
@@ -303,6 +305,8 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
     token_t tmpToken = parser->current_token;            // ulozeny nazov premmenej
     tk_type_t foundDataType = TK_KW_NIL;                 // ulozeny typ (ak je v definicii typ)
     tk_type_t foundType = TK_KW_NIL;                     // ulozeny najdeny typ vyrazu
+
+    gen_VarDefinition( gen, parser->current_token.data.String, parser->inFunction );
 
     // check ci je uz definovana
     if (search((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, parser->current_token.data.String) != NULL){
@@ -400,8 +404,28 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
     if (hasInitialization){
         check_VarType(parser, tmpToken, foundType, hasType);
         var_updateInit(parser, tmpToken);
-    }
 
+        char buffer[30];
+        printf("Token look ahead data.String: %lld\n", parser->current_token.data.Int);
+        switch (parser->current_token.type){
+            case(TK_INT):
+                sprintf(buffer, "%lld", parser->current_token.data.Int);
+                gen_AssignVal( gen, buffer, parser->inFunction, " int@" );
+                break;
+            case(TK_DOUBLE):
+                sprintf(buffer, "%f", parser->current_token.data.Double);
+                gen_AssignVal( gen, buffer, parser->inFunction, " float@" );
+                break;
+            case(TK_STRING):
+                gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " string@" );
+                break;
+            case(TK_BOOLEAN):
+                gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " bool@" );
+                break;
+            default:
+                break; 
+        }
+    }
     // parser didn't get any of ':', '='
     if (!hasType && !hasInitialization) {
         handle_error(SYNTAX_ERROR, parser->current_token.line, "Variable declaration must include a type or initialvarTypeization");
@@ -475,6 +499,9 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
     //token_t lookAheadToken;
 
     if (parser->current_token.type == TK_KW_IF) {
+
+
+
         parser_get_next_token(parser, tokenArray); // Get token after 'if'
 
         if (parser->current_token.type == TK_KW_LET) {
@@ -500,6 +527,8 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
             }
         }
 
+        gen_IfThenElse( gen, parser->inFunction );
+
         check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
         Node* newScope = NULL;
@@ -511,9 +540,13 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
             parser_get_next_token(parser,tokenArray);
         }
 
+        gen_IfDone(gen, parser->inFunction);
+
         //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
         check_next_token(parser, tokenArray, TK_KW_ELSE);
+
+        gen_IfThenElse_End( gen, parser->inFunction );
 
         check_next_token(parser, tokenArray, TK_LBRACE);
         parser_get_next_token(parser,tokenArray);
@@ -524,12 +557,14 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
 
         //check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
-
+        gen_IfDone_End( gen, parser->inFunction );
 
         //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
     } else if (parser->current_token.type == TK_KW_WHILE) {
         parser_get_next_token(parser, tokenArray); // Get token after 'while'
+
+        gen_While( gen, parser->inFunction );
 
         // start start ( 10
         // start part
@@ -541,6 +576,8 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
             handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Expected boolean in while statement");
         }
 
+        gen_WhileCond( gen, parser->inFunction );
+
         check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
         Node* newScope = NULL;
@@ -552,6 +589,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
             parser_get_next_token(parser,tokenArray);
         }
 
+        gen_WhileEnd( gen, parser->inFunction );
         //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
     } else {
@@ -587,6 +625,7 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
                    || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
             // Expressions
             //parser_get_next_token(parser, tokenArray);
+            //Poznamka od Duriho: V rule_expression je gen_Expr, ktora vysledok automaticky ulozi na stack, cize sa nemusi pisat prikaz PUSHS "nejaka premenna"
             foundType = rule_expression(parser, tokenArray, gen);
             foundType = convert_literal_to_datatype(foundType); // me no like
 
@@ -924,6 +963,8 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
     parser_get_next_token(parser, tokenArray); // consume '='
     parser_get_next_token(parser, tokenArray); // consume token after '='
 
+    
+
     token_t nextToken = token_lookahead(parser, tokenArray);
 
     if (parser->current_token.type == TK_IDENTIFIER && nextToken.type == TK_LPAR) {
@@ -966,6 +1007,27 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
     }
 
     var_updateInit(parser, tmpToken);
+
+    char buffer[30];
+    printf("Token look ahead data.String: %lld\n", parser->current_token.data.Int);
+    switch (parser->current_token.type){
+        case(TK_INT):
+            sprintf(buffer, "%lld", parser->current_token.data.Int);
+            gen_AssignVal( gen, buffer, parser->inFunction, " int@" );
+            break;
+        case(TK_DOUBLE):
+            sprintf(buffer, "%f", parser->current_token.data.Double);
+            gen_AssignVal( gen, buffer, parser->inFunction, " float@" );
+            break;
+        case(TK_STRING):
+            gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " string@" );
+            break;
+        case(TK_BOOLEAN):
+            gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " bool@" );
+            break;
+        default:
+            break; 
+    }
 }
 
 

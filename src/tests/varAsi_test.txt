@@ -1,0 +1,2 @@
+var zachod = 9
+zachod = 8

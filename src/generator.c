@@ -86,6 +86,20 @@ void gen_AssignVal( generator_t* gen, char* val, bool inFunc, char* type ) {
     }
 }
 
+/*
+JUMP _skip_functionName
+LABEL _functionName
+CREATEFRAME
+PUSHFRAME
+
+function body
+
+POPFRAME
+RETURN
+LABEL _skip_functionName
+*/
+
+
 void gen_FunctionHeader( generator_t* gen, char* funcName ) {
 
     add_Instruction( &gen->functionName, funcName );
@@ -607,7 +621,7 @@ void gen_GE( generator_t* gen ) {
                                       "LABEL ?end_GE\n"
                                       "POPFRAME\n"
                                       "RETURN\n"
-                                      "LABEL _skip_GE\n"
+                                      "LABEL _skip_GE\n\n"
                                       );
 }
 

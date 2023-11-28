@@ -1,0 +1,3 @@
+var a : Double
+var b : Int
+let c : Int

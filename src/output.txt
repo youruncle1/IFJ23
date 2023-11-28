@@ -1,0 +1,254 @@
+Token look ahead data.String: 5
+Token look ahead data.String: 6
+Token look ahead data.String: 7
+Token look ahead data.String: 8
+.IFJcode23
+DEFVAR GF@&bool
+DEFVAR GF@&tmp1
+DEFVAR GF@&tmp2
+DEFVAR GF@&tmp3
+JUMP _skip_readInt
+LABEL readInt
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@tmp1
+DEFVAR LF@type
+READ LF@tmp1 int
+TYPE LF@type LF@tmp1
+JUMPIFNEQ _retnil LF@type string@int
+PUSHS LF@tmp1
+POPFRAME
+RETURN
+LABEL _retnil
+PUSHS nil@nil
+POPFRAME
+RETURN
+LABEL _skip_readInt
+JUMP _skip_readString
+LABEL readString
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@tmp1
+READ LF@tmp1 string
+PUSHS LF@tmp1
+POPFRAME
+RETURN
+LABEL _skip_readString
+JUMP _skip_readDouble
+LABEL readDouble
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@tmp1
+DEFVAR LF@type
+READ LF@tmp1 float
+TYPE LF@type LF@tmp1
+JUMPIFNEQ _retnil LF@type string@float
+PUSHS LF@tmp1
+POPFRAME
+RETURN
+LABEL _retnil
+PUSHS nil@nil
+POPFRAME
+RETURN
+LABEL _skip_readDouble
+JUMP _skip_write
+LABEL write
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@term
+DEFVAR LF@termCount
+POPS LF@termCount
+LABEL _writeTerms
+JUMPIFEQ _writeEnd LF@termCount int@0
+SUB LF@termCount LF@termCount int@1
+POPS LF@term
+WRITE LF@term
+JUMP _writeTerms
+LABEL _writeEnd
+PUSHS nil@nil
+POPFRAME
+RETURN
+LABEL _skip_write
+JUMP _skip_Double2Int
+LABEL Double2Int
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@tmp1
+DEFVAR LF@tmp2
+POPS LF@tmp2
+FLOAT2INT LF@tmp1 LF@tmp2
+PUSHS LF@tmp1
+POPFRAME
+RETURN
+LABEL _skip_Double2Int
+JUMP _skip_Int2Double
+LABEL Int2Double
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@tmp2
+DEFVAR LF@tmp1
+POPS LF@tmp2
+INT2FLOAT LF@tmp1 LF@tmp2
+PUSHS LF@tmp1
+POPFRAME
+RETURN
+LABEL _skip_Int2Double
+JUMP _skip_substring
+LABEL substring
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@j
+DEFVAR LF@i
+DEFVAR LF@str
+DEFVAR LF@len
+POPS LF@j
+POPS LF@i
+POPS LF@str
+STRLEN LF@len LF@str
+DEFVAR LF@cmp
+#Guard functionality
+LT LF@cmp LF@i int@0
+JUMPIFEQ _retnil LF@cmp bool@true
+LT LF@cmp LF@j int@0
+JUMPIFEQ _retnil LF@cmp bool@true
+GT LF@cmp LF@i LF@j
+JUMPIFEQ _retnil LF@cmp bool@true
+EQ LF@cmp LF@i LF@len
+JUMPIFEQ _retnil LF@cmp bool@true
+GT LF@cmp LF@i LF@len
+JUMPIFEQ _retnil LF@cmp bool@true
+GT LF@cmp LF@j LF@len
+JUMPIFEQ _retnil LF@cmp bool@true
+#Making of substring
+DEFVAR LF@c
+DEFVAR LF@resultString
+MOVE LF@resultString string@
+LABEL _writeSubstring
+JUMPIFEQ _finished LF@i LF@j
+GETCHAR LF@c LF@str LF@i
+CONCAT LF@resultString LF@resultString LF@c
+ADD LF@i LF@i int@1
+JUMP _writeSubstring
+LABEL _finished
+PUSHS LF@resultString
+POPFRAME
+RETURN
+LABEL _retnil
+PUSHS nil@nil
+POPFRAME
+RETURN
+LABEL _skip_substring
+JUMP _skip_chr
+LABEL chr
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@c
+DEFVAR LF@i
+POPS LF@i
+INT2CHAR LF@c LF@i
+PUSHS LF@c
+POPFRAME
+RETURN
+LABEL _skip_chr
+JUMP _skip_ord
+LABEL ord
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@string
+POPS LF@string
+DEFVAR LF@c
+DEFVAR LF@len
+STRLEN LF@len LF@string
+JUMPIFEQ _retzero LF@len int@0
+STRI2INT LF@c LF@string int@0
+PUSHS LF@c
+POPFRAME
+RETURN
+LABEL _retzero
+PUSHS int@0
+POPFRAME
+RETURN
+LABEL _skip_ord
+JUMP _skip_length
+LABEL length
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@len
+DEFVAR LF@str
+POPS LF@str
+STRLEN LF@len LF@str
+PUSHS LF@len
+POPFRAME
+RETURN
+LABEL _skip_length
+JUMP _skip_COALESCE
+LABEL _COALESCE
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@left
+DEFVAR LF@right
+POPS LF@left
+JUMPIFEQ ?is_nil LF@left nil@nil
+POPS LF@right
+PUSHS LF@left
+LABEL ?is_nil
+POPFRAME
+RETURN
+LABEL _skip_COALESCE
+JUMP _skip_LE
+LABEL _LE
+CREAFRAME
+PUSHFRAME
+DEFVAR LF@right
+DEFVAR LF@left
+DEFVAR LF@result
+POPS LF@right
+POPS LF@left
+LT LF@result LF@left LF@right
+JUMPIFEQ ?is_false LF@result bool@false
+EQ LF@result LF@left LF@right
+JUMPIFEQ ?is_false LF@result bool@false
+MOVE GF@&bool bool@true
+JUMP ?end_LE
+label ?is_false
+MOVE GF@&bool bool@false
+LABEL ?end_LE
+POPFRAME
+RETURN
+LABEL _skip_LE
+JUMP _skip_GE
+LABEL _GE
+CREAFRAME
+PUSHFRAME
+DEFVAR LF@right
+DEFVAR LF@left
+DEFVAR LF@result
+POPS LF@right
+POPS LF@left
+GT LF@result LF@left LF@right
+JUMPIFEQ ?is_false LF@result bool@false
+EQ LF@result LF@left LF@right
+JUMPIFEQ ?is_false LF@result bool@false
+MOVE GF@&bool bool@true
+JUMP ?end_GE
+label ?is_false
+MOVE GF@&bool bool@false
+LABEL ?end_GE
+POPFRAME
+RETURN
+LABEL _skip_GE
+
+DEFVAR GF@a
+MOVE GF@a int@5
+DEFVAR GF@b
+MOVE GF@ab int@6
+PUSHS LF@a
+PUSHS LF@b
+LTS
+POPS GF@&bool
+JUMPIFEQ _else_0 GF@&bool bool@false
+MOVE GF@ab int@7
+JUMP _if_done0
+LABEL _else_0
+MOVE GF@ab int@8
+LABEL _if_done0
