@@ -1,13 +1,11 @@
 /*
 IFJ PROJEKT 2023/2024
-file: "src/error.c"
+file: "error.c"
 
 Error handling
 
 authors: xpolia05
-         xbencs00
-         xrusna08
-         xhonze01
+
 */
 
 #include "error.h"

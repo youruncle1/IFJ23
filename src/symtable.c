@@ -1,3 +1,13 @@
+/*
+IFJ PROJEKT 2023/2024
+file: "symtable.c"
+
+Symtable (BVS)
+
+authors: xpolia05
+         xbencs00
+
+*/
 #include "symtable.h"
 
 /* Funkce pro inicializaci zasobniku */

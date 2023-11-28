@@ -1,3 +1,13 @@
+/*
+IFJ PROJEKT 2023/2024
+file: "symtable.h"
+
+Symtable (BVS) - header file
+
+authors: xpolia05
+         xbencs00
+
+*/
 #ifndef SYMTABLE_H
 #define SYMTABLE_H
 

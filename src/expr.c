@@ -1,3 +1,12 @@
+/*
+IFJ PROJEKT 2023/2024
+file: "expr.c"
+
+Expression parser
+
+authors: xhonze01 
+
+*/
 #include "expr.h"
 
 #define TABLE_SIZE 20

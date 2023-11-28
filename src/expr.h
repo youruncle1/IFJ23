@@ -1,16 +1,15 @@
-#ifndef EXPR_H
-#define EXPR_H
 /*
 IFJ PROJEKT 2023/2024
-file: "src/scanner.c"
+file: "expr.h"
 
-Lexical analysis
+Expression parser - header file
 
-authors: xpolia05
-         xbencs00
-         xrusna08
-         xhonze01
+authors: xhonze01 
+
 */
+#ifndef EXPR_H
+#define EXPR_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

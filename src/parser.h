@@ -1,3 +1,13 @@
+/*
+IFJ PROJEKT 2023/2024
+file: "parser.h"
+
+Top-down recursive parser - header file
+
+authors: xpolia05
+
+*/
+
 #ifndef PARSER_H
 #define PARSER_H
 

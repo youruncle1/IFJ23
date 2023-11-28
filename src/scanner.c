@@ -1,13 +1,11 @@
 /*
 IFJ PROJEKT 2023/2024
-file: "src/scanner.c"
+file: "scanner.c"
 
-Lexical analysis
+Lexical analyser
 
 authors: xpolia05
-         xbencs00
-         xrusna08
-         xhonze01
+
 */
 
 #include "scanner.h"

@@ -1,13 +1,12 @@
 /*
 IFJ PROJEKT 2023/2024
-file: "src/parser.c"
+file: "parser.c"
 
-Parser
+Top-down recursive parser
 
 authors: xpolia05
-         xbencs00
-         xrusna08
-         xhonze01
+         xbencs00 - testing
+
 */
 
 #include "scanner.h"
