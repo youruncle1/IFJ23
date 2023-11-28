@@ -2,7 +2,7 @@
 #define EXPR_H
 /*
 IFJ PROJEKT 2023/2024
-file: "src/scanner.c"
+file: "src/expr.h"
 
 Lexical analysis
 
@@ -16,10 +16,8 @@ authors: xpolia05
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
-#include "scanner.h"
 #include "parser.h"
-#include "error.h"
-
+#include "generator.h"
 typedef enum {
     TOKEN_TYPE,
     AST_NODE_TYPE
@@ -99,7 +97,7 @@ ASTNode *parse_binary(Stack *stack, parser_t *parser);
 ASTNode *parse_par(Stack *stack, parser_t *parser);
 ASTNode *parse_expression(Stack *stack, parser_t *parser);
 int get_precedence(token_t top, token_t current);
-tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray);
+tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray, generator_t* gen);
 tk_type_t typeOf_ID(parser_t * parser, char* String);
 
 tk_type_t expr_convert_literal_to_datatype(tk_type_t tokenType);

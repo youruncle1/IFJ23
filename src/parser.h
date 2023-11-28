@@ -6,6 +6,8 @@
 #include "scanner.h"  
 #include "symtable.h"
 
+#include "generator.h"
+
 typedef struct {
     scanner_t *scanner;
     token_t current_token;
@@ -31,39 +33,74 @@ parser_t initParser(scanner_t *scanner);
 TokenArray *initTokenArray();
 
 parser_t initParser(scanner_t *scanner);
+
+
 TokenArray *initTokenArray();
+
 void parser_get_next_token(parser_t *parser, TokenArray *tokenArray);
+
 void parser_get_previous_token(parser_t *parser, TokenArray *tokenArray);
+
 token_t token_lookahead(parser_t *parser, TokenArray *tokenArray);
+
 void check_next_token(parser_t *parser, TokenArray *tokenArray, tk_type_t expectedType);
+
 bool check_token_type(parser_t *parser, tk_type_t expectedType);
+
 bool is_token_datatype(tk_type_t token);
+
 bool is_token_literal(tk_type_t token);
+
 bool isPartOfExpression(tk_type_t tokenType);
+
 bool isStartOfExpression(tk_type_t tokenType);
+
 tk_type_t find_varType(parser_t *parser);
-void parseProgram(parser_t *parser, TokenArray *tokenArray);
+
+void parseProgram(parser_t *parser, TokenArray *tokenArray, generator_t* gen);
+
 void check_VarType(parser_t *parser, token_t token, tk_type_t type, bool hasType);
-void parseBlockContents(parser_t* parser, TokenArray *tokenArray);
-void parseBlockContent(parser_t *parser, TokenArray *tokenArray);
-void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray);
+
+void parseBlockContents(parser_t* parser, TokenArray *tokenArray, generator_t* gen);
+
+void parseBlockContent(parser_t *parser, TokenArray *tokenArray, generator_t* gen);
+
+void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* gen);
+
 void setupFunctionScope(parser_t *parser, const char *functionName);
-void parseVarDefinition(parser_t *parser, TokenArray *tokenArray);
+
+void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* gen);
+
 void parser_insertVar2symtable(parser_t *parser, token_t tmpToken, bool isLet);
+
 void var_updateInit(parser_t *parser, token_t token);
-void parseControlStructure(parser_t *parser, TokenArray *tokenArray);
-void parseAssignment(parser_t *parser, TokenArray *tokenArray);
-void parseFunctionCall(parser_t *parser, TokenArray *tokenArray);
-void parseFunctionCallParams(parser_t *parser, TokenArray *tokenArray, Parameter **parsedParameters);
+
+void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t* gen);
+
+void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen);
+
+void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* gen);
+
+void parseFunctionCallParams(parser_t *parser, TokenArray *tokenArray, Parameter **parsedParameters, generator_t* gen);
+
 void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **parsedParameters);
+
 void addToken(TokenArray *array, token_t token);
+
 void firstParserPass(parser_t *parser, TokenArray *tokenArray);
-void parseReturn(parser_t *parser, TokenArray *TokenArray);
+
+void parseReturn(parser_t *parser, TokenArray *TokenArray, generator_t* gen);
+
 void CollectFunctionDefinition(parser_t *parser, TokenArray *tokenArray);
+
 void parseFunctionParameters(parser_t *parser, TokenArray *tokenArray);
+
 void parseParameter(parser_t *parser, TokenArray *tokenArray);
+
 void check_next_token_and_add(TokenArray *tokenArray, parser_t *parser, tk_type_t expectedType);
+
 void get_next_token(parser_t *parser);
+
 Node *searchFramesVar(parser_t *parser);
 
 // toto by bolo najlepsie nepouzivat a prerobit spravne exprparser...

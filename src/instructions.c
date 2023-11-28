@@ -54,5 +54,5 @@ void print_Intructions(instructionTape_t* tape){
     // tape->len += 1;
     add_Instruction(tape, "\0");
 
-    printf("%s", tape->data);
+    fprintf(stdout, "%s", tape->data);
 }

@@ -14,7 +14,7 @@ authors: xpolia05
 #include "error.h"
 #include "parser.h"
 #include "expr.h"
-#include "generator.h"
+// #include "generator.h"
 
 TokenArray *initTokenArray() {
     TokenArray *array = malloc(sizeof(TokenArray));
@@ -149,28 +149,26 @@ tk_type_t convert_literal_to_datatype(tk_type_t tokenType) {
     }
 }
 
-void parseProgram(parser_t *parser, TokenArray *tokenArray){
-
+void parseProgram(parser_t *parser, TokenArray *tokenArray, generator_t* gen){
 
     parser_get_next_token(parser, tokenArray); // get the first token
 
-
-    parseBlockContents(parser, tokenArray);
+    parseBlockContents(parser, tokenArray, gen);
 }
 
-void parseBlockContents(parser_t* parser, TokenArray *tokenArray) {
+void parseBlockContents(parser_t* parser, TokenArray *tokenArray, generator_t* gen) {
     switch (parser->current_token.type) {
         case TK_EOF:
             return;
         default:
-            parseBlockContent(parser, tokenArray);
+            parseBlockContent(parser, tokenArray, gen);
             break;
     }
     parser_get_next_token(parser, tokenArray);
-    parseBlockContents(parser, tokenArray);
+    parseBlockContents(parser, tokenArray, gen);
 }
 
-void parseBlockContent(parser_t *parser, TokenArray *tokenArray){
+void parseBlockContent(parser_t *parser, TokenArray *tokenArray, generator_t *gen){
     // <block_content> -> var Identifier <type_opt> <def_var>
     // <block_content> -> let Identifier <type_opt> <def_var>
     // <block_content> -> <function_definition>
@@ -184,29 +182,29 @@ void parseBlockContent(parser_t *parser, TokenArray *tokenArray){
                 handle_error(SYNTAX_ERROR, parser->current_token.line,
                              "Functions cannot be defined outside global scope");
             }
-            parseFunctionDefinition(parser, tokenArray);
+            parseFunctionDefinition(parser, tokenArray, gen);
             break;
         case TK_KW_VAR:                                             // -> var Identifier <type_opt> <def_var>
         case TK_KW_LET:                                             // -> let Identifier <type_opt> <def_var>
-            parseVarDefinition(parser, tokenArray);
+            parseVarDefinition(parser, tokenArray, gen);
             break;
         case TK_KW_IF:                                              // -> <control_structure> - if
         case TK_KW_WHILE:                                           // -> <control_structure> - while
-            parseControlStructure(parser, tokenArray);
+            parseControlStructure(parser, tokenArray, gen);
             break;
         case TK_KW_RETURN:
             if (!parser->inFunction) {
                 handle_error(SYNTAX_ERROR, parser->current_token.line, "return keyword found outside of function");
             }
-            parseReturn(parser, tokenArray);
+            parseReturn(parser, tokenArray, gen);
             break;
         case TK_IDENTIFIER:
             // TU_SEMANTIKA
             // zistit, ci moze byt start term iba nejaky expression (a + b bez priradenia, proste expr ktory nic neurobi)
             if (token_lookahead(parser, tokenArray).type == TK_LPAR) {          // <function_call>
-                parseFunctionCall(parser, tokenArray);
+                parseFunctionCall(parser, tokenArray, gen);
             } else if (token_lookahead(parser, tokenArray).type == TK_ASSIGN) { // <assignment>
-                parseAssignment(parser, tokenArray);
+                parseAssignment(parser, tokenArray, gen);
             } else {
                 handle_error(SYNTAX_ERROR, parser->current_token.line, "SYNTAX ERROR");
             }
@@ -216,12 +214,14 @@ void parseBlockContent(parser_t *parser, TokenArray *tokenArray){
     }
 }
 
-void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray){
+void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* gen){
     // func Identifier ( <parameter_list> ) <return_type_opt> { <function_body> }
     parser->inFunction = true;
     parser->scopeDepth++;
 
     parser_get_next_token(parser, tokenArray);                        // Identifier
+
+    gen_FunctionHeader( gen, parser->current_token.data.String );
 
     parser->current_func = search(parser->global_frame, parser->current_token.data.String);
 
@@ -233,7 +233,7 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray){
     parser_get_next_token(parser, tokenArray);
 
     while(parser->current_token.type != TK_RBRACE) {
-        parseBlockContent(parser, tokenArray);
+        parseBlockContent(parser, tokenArray, gen);
         parser_get_next_token(parser,tokenArray);
     }
 
@@ -299,11 +299,14 @@ bool isPartOfExpression(tk_type_t tokenType) {
     }
 }
 
-void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
+void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* gen){
 
     bool isLet = (parser->current_token.type == TK_KW_LET);
 
     check_next_token(parser, tokenArray, TK_IDENTIFIER); // Identifier
+    
+    gen_VarDefinition(gen, parser->current_token.data.String, parser->inFunction );
+
     token_t tmpToken = parser->current_token;            // ulozeny nazov premmenej
     //tk_type_t tmpType = TK_KW_NIL;                       // ulozeny typ (ak je v definicii typ)
     tk_type_t foundType = TK_KW_NIL;                     // ulozeny najdeny typ vyrazu
@@ -336,19 +339,20 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
         parser_get_next_token(parser, tokenArray); // Consume '=' token
         parser_get_next_token(parser, tokenArray); // Consume token after '='
         hasInitialization = true;
+        
 
         token_t nextToken = token_lookahead(parser, tokenArray); // Look ahead to distinguish between function call and expression
 
         if (parser->current_token.type == TK_IDENTIFIER && nextToken.type == TK_LPAR) {
             // Function call
-            parseFunctionCall(parser, tokenArray);
+            parseFunctionCall(parser, tokenArray, gen);
             foundType = parser->current_func_call->symbol.type;
 
         } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))
                    || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
             // Expressions
             //parser_get_next_token(parser, tokenArray);
-            foundType = rule_expression(parser, tokenArray);
+            foundType = rule_expression(parser, tokenArray, gen);
             foundType = convert_literal_to_datatype(foundType); // me no like
 
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
@@ -370,6 +374,24 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
             } else {
                 // literal
                 foundType = convert_literal_to_datatype(parser->current_token.type);
+                switch (foundType){
+                    case(TK_INT):
+                        gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, "int@" );
+                        break;
+                    case(TK_DOUBLE):
+                        gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, "float@" );
+                        break;
+                    case(TK_STRING):
+                        gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, "string@" );
+                        break;
+                    case(TK_BOOLEAN):
+                        gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, "bool@" );
+                        break;
+                    default:
+                        break;
+                }
+                
+                
                 // check ci sedi foundtype s datovym typom prave definovanej premennej alebo prirad ak nema
             }
         } else {
@@ -454,7 +476,7 @@ void var_updateInit(parser_t *parser, token_t token){
     }
 }
 
-void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
+void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
 
     parser->scopeDepth++;
 
@@ -465,10 +487,13 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
     if (parser->current_token.type == TK_KW_IF) {
         parser_get_next_token(parser, tokenArray); // Get token after 'if'
 
+        gen_IfThenElse( gen, parser->inFunction );
+
         if (parser->current_token.type == TK_KW_LET) {
             // TU_SEMANTIKA
             // dokoncit semantiku pre let id variaciu
             // rip nil 2023-2023
+
 
             // check ci je init
             check_next_token(parser, tokenArray, TK_IDENTIFIER);
@@ -482,7 +507,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
             // if (!isStartOfExpression(parser->current_token.type) || !isPartOfExpression(lookAheadToken.type)){
             //     handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected expression or Let id in if statement");
             // }
-            foundType = rule_expression(parser, tokenArray); // Parse the conditional expression
+            foundType = rule_expression(parser, tokenArray, gen); // Parse the conditional expression
             if (foundType != TK_BOOLEAN){
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Expected boolean in if statement");
             }
@@ -494,7 +519,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
         push(parser->local_frame, newScope); // Push new empty scope to local frame
 
         while (parser->current_token.type != TK_RBRACE){
-            parseBlockContent(parser, tokenArray);
+            parseBlockContent(parser, tokenArray, gen);
         }
 
         check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
@@ -507,6 +532,9 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
         //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
     } else if (parser->current_token.type == TK_KW_WHILE) {
+
+        gen_While( gen, parser->inFunction );
+
         parser_get_next_token(parser, tokenArray); // Get token after 'while'
 
         // start start ( 10
@@ -514,7 +542,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
         // if (isStartOfExpression(parser->current_token.type) || !isPartOfExpression(lookAheadToken.type)){
         //     handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected expression while statement");
         // }
-        foundType = rule_expression(parser, tokenArray); // Parse the conditional expression
+        foundType = rule_expression(parser, tokenArray, gen); // Parse the conditional expression
         if (foundType != TK_BOOLEAN){
             handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Expected boolean in while statement");
         }
@@ -525,7 +553,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
         push(parser->local_frame, newScope); // Push new empty scope to local frame
 
         while (parser->current_token.type != TK_RBRACE){
-            parseBlockContent(parser, tokenArray);
+            parseBlockContent(parser, tokenArray, gen);
         }
 
         check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
@@ -538,7 +566,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray) {
 }
 
 
-void parseReturn(parser_t *parser, TokenArray *tokenArray) {
+void parseReturn(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
 
     parser->hasReturn = true;
 
@@ -563,7 +591,7 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray) {
                    || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
             // Expressions
             //parser_get_next_token(parser, tokenArray);
-            foundType = rule_expression(parser, tokenArray);
+            foundType = rule_expression(parser, tokenArray, gen);
             foundType = convert_literal_to_datatype(foundType); // me no like
 
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
@@ -595,7 +623,7 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray) {
 
 /* ||||||||||||||||||||||||||||||||| FINSH PARSEFUNCTIONCALL ||||||||||||||||||||||||||||||||*/
 
-void parseFunctionCall(parser_t *parser, TokenArray *tokenArray) {
+void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
 
     token_t funcToken = parser->current_token; // udrzi nazov funkcie
 
@@ -605,7 +633,7 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray) {
     //int *parsedParamCount = 0;
     //token_t *tmpToken; // udrzi nazov
 
-    parseFunctionCallParams(parser, tokenArray, &parsedParameters);
+    parseFunctionCallParams(parser, tokenArray, &parsedParameters, gen);
 
     int parsedParamCount = parser->parsedParamCount;
     //check_next_token(parser, tokenArray, TK_RPAR); uz by mal byt consumed z parseFunctionCallParams
@@ -744,7 +772,7 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray) {
     parser->parsedParamCount = 0;
 }
 
-void parseFunctionCallParams(parser_t *parser, TokenArray *tokenArray, Parameter **parsedParameters){
+void parseFunctionCallParams(parser_t *parser, TokenArray *tokenArray, Parameter **parsedParameters, generator_t* gen){
 
     parser_get_next_token(parser, tokenArray);
 
@@ -853,7 +881,7 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
 }
 
 
-void parseAssignment(parser_t *parser, TokenArray *tokenArray){
+void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen){
     /*
     Sémantika příkazu je následující: Příkaz provádí vyhodnocení výrazu výraz (viz kapitola 5) a přiřazení jeho hodnoty do levého operandu id,
     který je modifikovatelnou proměnnou (tj. definovanou pomocí klíčového slova var).
@@ -894,14 +922,14 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray){
 
     if (parser->current_token.type == TK_IDENTIFIER && nextToken.type == TK_LPAR) {
         // Function call
-        parseFunctionCall(parser, tokenArray);
+        parseFunctionCall(parser, tokenArray, gen);
         foundType = parser->current_func_call->symbol.type;
 
     } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))
                || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
         // Expressions
         //parser_get_next_token(parser, tokenArray);
-        foundType = rule_expression(parser, tokenArray);
+        foundType = rule_expression(parser, tokenArray, gen);
         foundType = convert_literal_to_datatype(foundType); // me no like
 
     } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {

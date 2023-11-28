@@ -1,4 +1,5 @@
 #include "expr.h"
+#include "parser.h"
 
 #define TABLE_SIZE 20
 
@@ -239,6 +240,8 @@ tk_type_t typeOf_ID(parser_t * parser, char* String){
         return node->symbol.type;
     } else
         handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "");
+
+    return 0;
 }
 ASTNode *parse_binary(Stack *stack, parser_t *parser){
     ASTNode *right;
@@ -331,7 +334,7 @@ ASTNode *parse_expression(Stack *stack, parser_t *parser) {
          
          
     }
-    
+    return 0;
 }
 
 int get_precedence(token_t top, token_t current) {
@@ -354,7 +357,7 @@ tk_type_t expr_convert_literal_to_datatype(tk_type_t tokenType){
     }
 }
 
-tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray){
+tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray , generator_t* gen){
     Stack *stack= (Stack*)malloc(sizeof(Stack));
     stack_init(stack);
     Stack *expr= (Stack*)malloc(sizeof(Stack));
@@ -370,7 +373,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray){
         StackItem *Item;
         
         // checks if current token is out of expresion
-        if (precedence == 'E' && (parser->current_token.eol_before == true || parser->current_token.type == TK_LBRACE))
+        if (precedence == 'E' && ((parser->current_token.eol_before == true) || parser->current_token.type == TK_LBRACE))
         {
             precedence = '>';
         }
@@ -380,6 +383,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray){
             result = stack->top->data.node->resultType;
             //parser_get_previous_token(parser, tokenArray);
             parser_get_previous_token(parser, tokenArray);
+            gen_Expr(gen, stack->top->data.node, parser->inFunction );
             return result;
             }
 
