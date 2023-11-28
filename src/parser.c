@@ -339,7 +339,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray){
             // Function call
             parseFunctionCall(parser, tokenArray);
             foundType = parser->current_func_call->symbol.type;
-            if (foundType = TK_KW_NIL){
+            if (foundType == TK_KW_NIL){
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Cannot assign a void function");
             }
 
@@ -930,7 +930,7 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray){
         // Function call
         parseFunctionCall(parser, tokenArray);
         foundType = parser->current_func_call->symbol.type;
-        if (foundType = TK_KW_NIL){
+        if (foundType == TK_KW_NIL){
             handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Cannot assign a void function");
         }
 
