@@ -363,7 +363,7 @@ tk_type_t expr_convert_literal_to_datatype(tk_type_t tokenType){
     }
 }
 
-tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray){
+tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray, generator_t* gen){
     Stack *stack= (Stack*)malloc(sizeof(Stack));
     stack_init(stack);
     Stack *expr= (Stack*)malloc(sizeof(Stack));
@@ -392,6 +392,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray){
             result = stack->top->data.node->resultType;
             //parser_get_previous_token(parser, tokenArray);
             parser_get_previous_token(parser, tokenArray);
+            gen_Expr(gen, stack->top->data.node, parser->inFunction);
             return result;
             }
 

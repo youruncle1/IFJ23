@@ -18,6 +18,7 @@ authors: xhonze01
 #include "scanner.h"
 #include "parser.h"
 #include "error.h"
+#include "generator.h"
 
 typedef enum {
     TOKEN_TYPE,
@@ -85,21 +86,37 @@ typedef enum identType {
 
 
 void stack_init(Stack *stack);
+
 bool stack_push_token(Stack *stack, token_t token);
+
 void stack_push_node(Stack *stack, ASTNode *node);
+
 void stack_push_after_terminal(Stack *stack, token_t token);
+
 StackItem *stack_pop(Stack *stack);
+
 bool stack_isempty(Stack *stack);
+
 int performSemanticCheck(ASTNode* node, parser_t *parser);
+
 ASTNode *create_node(token_t token, ASTNodeType type);
+
 ASTNode *parse_non_terminal(token_t token);
+
 ASTNode *parse_unary(Stack *stack);
+
 ASTNode *parse_binary(Stack *stack, parser_t *parser);
+
 ASTNode *parse_par(Stack *stack, parser_t *parser);
+
 ASTNode *parse_expression(Stack *stack, parser_t *parser);
+
 int get_precedence(token_t top, token_t current);
-tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray);
+
+tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray, generator_t* gen);
+
 tk_type_t typeOf_ID(parser_t * parser, char* String);
 
 tk_type_t expr_convert_literal_to_datatype(tk_type_t tokenType);
+
 #endif
