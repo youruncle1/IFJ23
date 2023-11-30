@@ -1,2 +1,3 @@
 var zachod = 9
-zachod = 8
+
+zachod = zachod + 6

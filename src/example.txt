@@ -1,7 +1,3 @@
-func r() {
-    let a = 10
-
-    return b
-
-    let b = 10
+func decrement(of n: Int, by m: Int) -> Int {
+    n = n + m
 }

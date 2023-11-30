@@ -406,7 +406,6 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
         var_updateInit(parser, tmpToken);
 
         char buffer[30];
-        printf("Token look ahead data.String: %lld\n", parser->current_token.data.Int);
         switch (parser->current_token.type){
             case(TK_INT):
                 sprintf(buffer, "%lld", parser->current_token.data.Int);
@@ -499,8 +498,6 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
     //token_t lookAheadToken;
 
     if (parser->current_token.type == TK_KW_IF) {
-
-
 
         parser_get_next_token(parser, tokenArray); // Get token after 'if'
 
@@ -942,6 +939,8 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
     // dalsi check: bacha na initialization pravej strany
     // spravit updateinit ak nebola lava strana init
 
+    bool exprAssinged = false;  //help variable to chceck if assignent was done in expression
+
     token_t tmpToken = parser->current_token; // should hold name of variable, for usage in updateInit
 
     Node *node = searchFramesVar(parser);
@@ -980,6 +979,7 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
         // Expressions
         //parser_get_next_token(parser, tokenArray);
         foundType = rule_expression(parser, tokenArray, gen);
+        exprAssinged = true;
         foundType = convert_literal_to_datatype(foundType); // me no like
 
     } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
@@ -1008,25 +1008,26 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
 
     var_updateInit(parser, tmpToken);
 
-    char buffer[30];
-    printf("Token look ahead data.String: %lld\n", parser->current_token.data.Int);
-    switch (parser->current_token.type){
-        case(TK_INT):
-            sprintf(buffer, "%lld", parser->current_token.data.Int);
-            gen_AssignVal( gen, buffer, parser->inFunction, " int@" );
-            break;
-        case(TK_DOUBLE):
-            sprintf(buffer, "%f", parser->current_token.data.Double);
-            gen_AssignVal( gen, buffer, parser->inFunction, " float@" );
-            break;
-        case(TK_STRING):
-            gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " string@" );
-            break;
-        case(TK_BOOLEAN):
-            gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " bool@" );
-            break;
-        default:
-            break; 
+    if (!exprAssinged){
+        char buffer[30];
+        switch (parser->current_token.type){
+            case(TK_INT):
+                sprintf(buffer, "%lld", parser->current_token.data.Int);
+                gen_AssignVal( gen, buffer, parser->inFunction, " int@" );
+                break;
+            case(TK_DOUBLE):
+                sprintf(buffer, "%f", parser->current_token.data.Double);
+                gen_AssignVal( gen, buffer, parser->inFunction, " float@" );
+                break;
+            case(TK_STRING):
+                gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " string@" );
+                break;
+            case(TK_BOOLEAN):
+                gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " bool@" );
+                break;
+            default:
+                break; 
+        }
     }
 }
 

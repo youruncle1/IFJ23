@@ -51,10 +51,16 @@ void add_newLine( instructionTape_t* tape ) {
 
 void add_Int( instructionTape_t* tape, int n ) {
 
-    //if length of tape plus n is > capacity, expand capacity
     char intostr[20];
     sprintf( intostr, "%d", n );
     add_Instruction(tape, intostr);
+}
+
+void clear_Tape( instructionTape_t* tape ) {
+    free( tape->data );
+    tape->len = 0;
+    tape->capacity = INIT_CAPACITY;
+    tape->data = (char*)malloc(INIT_CAPACITY * sizeof(char));
 }
 
 

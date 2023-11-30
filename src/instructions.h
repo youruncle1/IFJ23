@@ -35,6 +35,8 @@ void add_Int( instructionTape_t* tape, int n );
 
 void add_Instruction( instructionTape_t* tape, char* instruction );
 
+void clear_Tape( instructionTape_t* tape );
+
 void print_Intructions( instructionTape_t* tape );
 
 #endif //INSTRUCTION_TAPE

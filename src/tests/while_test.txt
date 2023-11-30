@@ -1,0 +1,6 @@
+let a = 10
+var b = 0
+
+while (a != b) {
+    b = b + 1
+}

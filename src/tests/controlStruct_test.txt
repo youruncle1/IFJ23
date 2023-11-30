@@ -1,11 +1,12 @@
-var a = 5
-var b = 6
+var a : Int = 5
+var b : Int = 6
+var c : Int
 
 if (a < b)
 {
-    a = 7
+    c = b + a
 }
 else
 {
-    a = 8
+    a = a - b
 }
