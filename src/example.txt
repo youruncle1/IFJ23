@@ -1,3 +1,2 @@
-func decrement(of n: Int, by m: Int) -> Int {
-    n = n + m
-}
+let HOVNISKO : Int = 20
+write(HOVNISKO, 23, "toto je stringeroo\ntoto je string na novom riadku s mriezkou#\n", 0.999999)

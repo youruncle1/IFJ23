@@ -1,0 +1,27 @@
+.IFJcode23
+JUMP _skip_readInt
+LABEL readInt
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@tmp1
+DEFVAR LF@type
+READ LF@tmp1 int
+TYPE LF@type LF@tmp1
+JUMPIFNEQ _retnil LF@type string@int
+PUSHS LF@tmp1
+POPFRAME
+RETURN
+LABEL _retnil
+PUSHS nil@nil
+POPFRAME
+RETURN
+LABEL _skip_readInt
+
+WRITE string@napis_cislo_chalan
+CALL readInt
+DEFVAR GF@i
+POPS GF@i
+ADD GF@i GF@i int@9
+WRITE string@tvoje_cislo_+_9_=
+WRITE GF@i
+WRITE string@\010

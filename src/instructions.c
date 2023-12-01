@@ -49,11 +49,22 @@ void add_newLine( instructionTape_t* tape ) {
     tape->len = plus_new_line;
 }
 
+void add_Double( instructionTape_t* tape, double d ) {
+    
+    char doubletostr[40];
+    sprintf( doubletostr, "%a", d );
+    add_Instruction( tape, doubletostr );
+}
+
 void add_Int( instructionTape_t* tape, int n ) {
 
     char intostr[20];
     sprintf( intostr, "%d", n );
-    add_Instruction(tape, intostr);
+    add_Instruction( tape, intostr );
+}
+
+void add_Char( instructionTape_t* tape, char c ) {
+    add_Instruction( tape, &c );
 }
 
 void clear_Tape( instructionTape_t* tape ) {
@@ -72,3 +83,39 @@ void print_Intructions(instructionTape_t* tape){
 
     fprintf(stdout, "%s", tape->data);
 }
+
+void DLL_Init( DLLParamList* params ) {
+    params->first = NULL;
+    params->activ = NULL;
+    params->last = NULL;
+}
+
+void DLL_Dispose( DLLParamList* params ) {
+    
+    if( params->first == NULL && params->last == NULL) return;
+
+    DLLParam frst = params->first;
+    DLLParam nxt = NULL;
+
+    while (frst != NULL) {
+        nxt = frst->next;
+        free(frst);
+        frst = nxt;
+    }
+    DLL_Init(params);
+}
+
+
+/*
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+                                    DOKONCIM NESKOR, SPANOKO PLSASKIODFJlisdugb
+#######################################################################################################
+
+#######################################################################################################
+*/

@@ -1,0 +1,27 @@
+.IFJcode23
+JUMP _skip_Int2Double
+LABEL Int2Double
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@tmp2
+DEFVAR LF@tmp1
+POPS LF@tmp2
+INT2FLOAT LF@tmp1 LF@tmp2
+PUSHS LF@tmp1
+POPFRAME
+RETURN
+LABEL _skip_Int2Double
+
+PUSHS int@8
+CALL Int2Double
+DEFVAR GF@flt
+DEFVAR GF@typestr
+POPS GF@flt
+TYPE GF@typestr GF@flt
+JUMPIFEQ _istype GF@typestr string@float
+WRITE string@buzeranstvo\032sa\032nepodarilo\010
+EXIT int@0
+LABEL _istype
+WRITE GF@flt
+WRITE string@\010
+WRITE string@sa\032podarilo\010

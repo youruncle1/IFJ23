@@ -23,6 +23,7 @@ generator_t gen_Init(){
     gen.functionFoot = init_Tape();
     gen.functionName = init_Tape();
     gen.varName = init_Tape();
+    gen.stringParam = init_Tape();
     gen.selectCount = 0;
     gen.iterCount = 0;
     return gen;
@@ -144,15 +145,180 @@ void gen_FunctionCall( generator_t* gen, char* funcName, bool inFunc ) {
 void gen_FunctionParam( generator_t* gen, char* param, bool inFunc ) {
     
     if ( inFunc ) {
-        add_Instruction( &gen->functionBody, "PUSHS " );
+        add_Instruction( &gen->functionBody, "PUSHS LF@ " );
         add_Instruction( &gen->functionBody, param );
         add_newLine( &gen->functionBody );
     } else {
-        add_Instruction( &gen->mainBody, "PUSHS " );
+        add_Instruction( &gen->mainBody, "PUSHS GF@ " );
         add_Instruction( &gen->mainBody, param );
         add_newLine( &gen->mainBody );
     }
 }
+
+void gen_FunctionParamInt( generator_t* gen, long val, bool inFunc ) {
+    
+    if ( inFunc ) {
+        add_Instruction( &gen->functionBody, "PUSHS int@" );
+        add_Int( &gen->functionBody, val );
+        add_newLine( &gen->functionBody );
+    } else {
+        add_Instruction( &gen->mainBody, "PUSHS int@" );
+        add_Int( &gen->mainBody, val );
+        add_newLine( &gen->mainBody );
+    }
+}
+
+void gen_FunctionParamDouble( generator_t* gen, double val, bool inFunc ) {
+    
+    if ( inFunc ) {
+        add_Instruction( &gen->functionBody, "PUSHS float@" );
+        add_Double( &gen->functionBody, val );
+        add_newLine( &gen->functionBody );
+    } else {
+        add_Instruction( &gen->mainBody, "PUSHS float@" );
+        add_Double( &gen->mainBody, val );
+        add_newLine( &gen->mainBody );
+    }
+}
+
+void gen_FunctionParamString( generator_t* gen, char* str, bool inFunc ) {
+    
+    unsigned int length = strlen(str);
+
+    for ( unsigned int i = 0; i < length; i++ ) {
+        switch(str[i]) {
+            case 0:
+                add_Instruction( &gen->stringParam, "\\000" );
+                break;
+            case 1:
+                add_Instruction( &gen->stringParam, "\\001" );
+                break;
+            case 2:
+                add_Instruction( &gen->stringParam, "\\002" );
+                break;
+            case 3:
+                add_Instruction( &gen->stringParam, "\\003" );
+                break;
+            case 4:
+                add_Instruction( &gen->stringParam, "\\004" );
+                break;
+            case 5:
+                add_Instruction( &gen->stringParam, "\\005" );
+                break;
+            case 6:
+                add_Instruction( &gen->stringParam, "\\006" );
+                break;
+            case 7:
+                add_Instruction( &gen->stringParam, "\\007" );
+                break;
+            case 8:
+                add_Instruction( &gen->stringParam, "\\008" );
+                break;
+            case 9:
+                add_Instruction( &gen->stringParam, "\\009" );
+                break;
+            case 10:
+                add_Instruction( &gen->stringParam, "\\010" );
+                break;
+            case 11:
+                add_Instruction( &gen->stringParam, "\\011" );
+                break;
+            case 12:
+                add_Instruction( &gen->stringParam, "\\012" );
+                break;
+            case 13:
+                add_Instruction( &gen->stringParam, "\\013" );
+                break;
+            case 14:
+                add_Instruction( &gen->stringParam, "\\014" );
+                break;
+            case 15:
+                add_Instruction( &gen->stringParam, "\\015" );
+                break;
+            case 16:
+                add_Instruction( &gen->stringParam, "\\016" );
+                break;
+            case 17:
+                add_Instruction( &gen->stringParam, "\\017" );
+                break;
+            case 18:
+                add_Instruction( &gen->stringParam, "\\018" );
+                break;
+            case 19:
+                add_Instruction( &gen->stringParam, "\\019" );
+                break;
+            case 20:
+                add_Instruction( &gen->stringParam, "\\020" );
+                break;
+            case 21:
+                add_Instruction( &gen->stringParam, "\\021" );
+                break;
+            case 22:
+                add_Instruction( &gen->stringParam, "\\022" );
+                break;
+            case 23:
+                add_Instruction( &gen->stringParam, "\\023" );
+                break;
+            case 24:
+                add_Instruction( &gen->stringParam, "\\024" );
+                break;
+            case 25:
+                add_Instruction( &gen->stringParam, "\\025" );
+                break;
+            case 26:
+                add_Instruction( &gen->stringParam, "\\026" );
+                break;
+            case 27:
+                add_Instruction( &gen->stringParam, "\\027" );
+                break;
+            case 28:
+                add_Instruction( &gen->stringParam, "\\028" );
+                break;
+            case 29:
+                add_Instruction( &gen->stringParam, "\\029" );
+                break;
+            case 30:
+                add_Instruction( &gen->stringParam, "\\030" );
+                break;
+            case 31:
+                add_Instruction( &gen->stringParam, "\\031" );
+                break;
+            case 32:
+                add_Instruction( &gen->stringParam, "\\032" );
+                break;
+            case 35:
+                add_Instruction( &gen->stringParam, "\\035" );
+                break;
+            case 92:
+                add_Instruction( &gen->stringParam, "\\092" );
+                break;
+            default:
+                add_Char( &gen->stringParam, str[i] );
+                break;
+        }
+    }
+
+    if ( inFunc ) {
+        add_Instruction( &gen->functionBody, "PUSHS string@" );
+        add_Instruction( &gen->functionBody, gen->stringParam.data );
+        add_newLine( &gen->functionBody );
+    } else {
+        add_Instruction( &gen->mainBody, "PUSHS string@" );
+        add_Instruction( &gen->mainBody, gen->stringParam.data );
+        add_newLine( &gen->mainBody );
+    }
+    clear_Tape( &gen->stringParam );
+}
+
+void gen_FunctionParamNil( generator_t* gen, bool inFunc ) {
+    
+    if ( inFunc ) {
+        add_Instruction( &gen->functionBody, "PUSHS nil@nil\n" );
+    } else {
+        add_Instruction( &gen->mainBody, "PUSHS nil@nil\n" );
+    }
+}
+
 
 void gen_Function( generator_t* gen ) {
     
@@ -293,22 +459,22 @@ void gen_WhileEnd( generator_t* gen, bool inFunc ) {
     gen->iterCount++;
 }
 
-void convert_Type( generator_t* gen, ASTNode* node, ASTNode* childNode, bool inFunc ) {
+// void convert_Type( generator_t* gen, ASTNode* node, ASTNode* childNode, bool inFunc ) {
 
-    if (  node->resultType == TK_DOUBLE ) {
-        if ( inFunc ) {
-            add_Instruction( &gen->functionBody, "CALL Int2Double\n" );
-        } else {
-            add_Instruction( &gen->mainBody, "CALL Int2Double\n" );
-        }
-    } else if ( node->resultType == TK_INT ) {
-        if ( inFunc ) {
-            add_Instruction( &gen->functionBody, "CALL Double2Int\n" );
-        } else {
-            add_Instruction( &gen->mainBody, "CALL Double2Int\n" );
-        }
-    }
-}
+//     if (  node->resultType == TK_DOUBLE ) {
+//         if ( inFunc ) {
+//             add_Instruction( &gen->functionBody, "CALL Int2Double\n" );
+//         } else {
+//             add_Instruction( &gen->mainBody, "CALL Int2Double\n" );
+//         }
+//     } else if ( node->resultType == TK_INT ) {
+//         if ( inFunc ) {
+//             add_Instruction( &gen->functionBody, "CALL Double2Int\n" );
+//         } else {
+//             add_Instruction( &gen->mainBody, "CALL Double2Int\n" );
+//         }
+//     }
+// }
 
 void boolian_convert_Type( generator_t* gen, ASTNode* node, bool inFunc ) {
 

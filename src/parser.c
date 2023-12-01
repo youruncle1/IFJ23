@@ -658,6 +658,7 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
 void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
 
     token_t funcToken = parser->current_token; // udrzi nazov funkcie
+    gen->isWrite = strcmp(funcToken.data.String, "write");
 
     parser_get_next_token(parser, tokenArray); // consume '('
 
@@ -798,6 +799,8 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
         }
     }
 
+    //generate the function call
+    gen_FunctionCall( gen, funcToken.data.String, parser->inFunction );
 
     // NASTAV PARSER->CURRENT_FUNC_CALL NA CHECKNUTIE TYPU PRI ASSIGNMENT
     parser->current_func_call = functionNode;
@@ -894,6 +897,11 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
         } else {
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected ':', ',' or ')' after identifier");
         }
+
+        //If we are not calling write, and the param is variable, generate it
+        if (gen->isWrite != 0){
+            gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction);
+        }
     }
         // Token 2: Literal found
     else if (is_token_literal(parser->current_token.type)) {
@@ -904,6 +912,27 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
         // Convert literal to its corresponding datatype
         (*parsedParameters)[parsedParamCount].type = convert_literal_to_datatype(parser->current_token.type);
 
+        // generate function parameters that are literals if we are not generating write
+        if (gen->isWrite != 0) {
+            switch( (*parsedParameters)[parsedParamCount].type ) {
+                case TK_KW_INT:
+                case TK_KW_INT_OPT:
+                    gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction );
+                    break;
+                case TK_KW_DOUBLE:
+                case TK_KW_DOUBLE_OPT:
+                    gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction );
+                    break;
+                case TK_KW_STRING:
+                case TK_KW_STRING_OPT:
+                    gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction );
+                    break;
+                case TK_KW_NIL:
+                    gen_FunctionParamNil( gen, parser->inFunction );
+                default:
+                    break;
+            }
+        }
         parser_get_next_token(parser, tokenArray);  // consume comma or lpar
 
         // Check for ',' or ')' after literal

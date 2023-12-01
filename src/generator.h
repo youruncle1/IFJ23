@@ -25,10 +25,10 @@ typedef struct{
     instructionTape_t functionFoot;
     instructionTape_t functionName;
     instructionTape_t varName;
+    instructionTape_t stringParam;
     int selectCount;
-
     int iterCount;
-
+    int isWrite;
 
 }generator_t;
 
@@ -47,6 +47,14 @@ void gen_FunctionFooter( generator_t* gen);
 void gen_FunctionCall( generator_t* gen, char* funcName, bool inFunc );
 
 void gen_FunctionParam( generator_t* gen, char* param, bool inFunc );
+
+void gen_FunctionParamInt( generator_t* gen, long val, bool inFunc );
+
+void gen_FunctionParamDouble( generator_t* gen, double val, bool inFunc );
+
+void gen_FunctionParamString( generator_t* gen, char* str, bool inFunc );
+
+void gen_FunctionParamNil( generator_t* gen, bool inFunc );
 
 void gen_Function( generator_t* gen );
 

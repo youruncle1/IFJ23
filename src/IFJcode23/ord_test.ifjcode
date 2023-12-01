@@ -1,0 +1,27 @@
+.IFJcode23
+JUMP _skip_ord
+LABEL ord
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@string
+POPS LF@string
+DEFVAR LF@c
+DEFVAR LF@len
+STRLEN LF@len LF@string
+JUMPIFEQ _retzero LF@len int@0
+STRI2INT LF@c LF@string int@0
+PUSHS LF@c
+POPFRAME
+RETURN
+LABEL _retzero
+PUSHS int@0
+POPFRAME
+RETURN
+LABEL _skip_ord
+
+PUSHS string@ab
+CALL ord
+DEFVAR GF@hi
+POPS GF@hi
+WRITE GF@hi
+WRITE string@\010

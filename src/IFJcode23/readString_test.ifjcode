@@ -1,0 +1,19 @@
+.IFJcode23
+
+JUMP _jumpOverReadString
+LABEL readString
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@tmp1
+READ LF@tmp1 string
+PUSHS LF@tmp1
+POPFRAME
+RETURN
+LABEL _jumpOverReadString
+
+WRITE string@napis_svoje_meno: 
+CALL readString
+DEFVAR GF@msg
+POPS GF@msg
+WRITE string@ahoj_
+WRITE GF@msg

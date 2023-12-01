@@ -1,0 +1,26 @@
+.IFJcode23
+JUMP _skip_length
+LABEL length
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@len
+DEFVAR LF@str
+POPS LF@str
+STRLEN LF@len LF@str
+PUSHS LF@len
+POPFRAME
+RETURN
+LABEL _skip_length
+
+WRITE string@dlzka\032tohto\032picusu:\010
+DEFVAR GF@str
+#Dlzka \032 je 1, lebo to je medzera
+MOVE GF@str string@\032a\032
+PUSHS GF@str
+CALL length
+DEFVAR GF@l
+POPS GF@l
+WRITE GF@str
+WRITE string@\010je\010
+WRITE GF@l
+WRITE string@\010

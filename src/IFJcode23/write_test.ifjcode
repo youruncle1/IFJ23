@@ -1,0 +1,30 @@
+.IFJcode23
+JUMP _skip_write
+LABEL write
+CREATEFRAME
+PUSHFRAME
+DEFVAR LF@term
+DEFVAR LF@termCount
+POPS LF@termCount
+LABEL _writeTerms
+JUMPIFEQ _writeEnd LF@termCount int@0
+SUB LF@termCount LF@termCount int@1
+POPS LF@term
+WRITE LF@term
+JUMP _writeTerms
+LABEL _writeEnd
+PUSHS nil@nil
+POPFRAME
+RETURN
+LABEL _skip_write
+
+PUSHS string@\010
+PUSHS string@on
+PUSHS nil@nil
+PUSHS string@s
+PUSHS string@neger
+PUSHS string@\032
+PUSHS string@ahoj
+PUSHS int@7
+
+CALL write
