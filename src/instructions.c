@@ -70,7 +70,7 @@ void add_Int( instructionTape_t* tape, int n ) {
 void add_Char( instructionTape_t* tape, char c ) {
     char str[2];
     str[0] = c;
-    str[1]='\0';
+    str[1] = '\0';
     add_Instruction( tape, &str );
 }
 
@@ -84,45 +84,7 @@ void clear_Tape( instructionTape_t* tape ) {
 
 void print_Intructions(instructionTape_t* tape){
     
-    // tape->capacity += 1;
-    // tape->len += 1;
     add_Instruction(tape, "\0");
 
     fprintf(stdout, "%s", tape->data);
 }
-
-void DLL_Init( DLLParamList* params ) {
-    params->first = NULL;
-    params->activ = NULL;
-    params->last = NULL;
-}
-
-void DLL_Dispose( DLLParamList* params ) {
-    
-    if( params->first == NULL && params->last == NULL) return;
-
-    DLLParam frst = params->first;
-    DLLParam nxt = NULL;
-
-    while (frst != NULL) {
-        nxt = frst->next;
-        free(frst);
-        frst = nxt;
-    }
-    DLL_Init(params);
-}
-
-
-/*
-#######################################################################################################
-#######################################################################################################
-#######################################################################################################
-#######################################################################################################
-#######################################################################################################
-#######################################################################################################
-#######################################################################################################
-                                    DOKONCIM NESKOR, SPANOKO PLSASKIODFJlisdugb
-#######################################################################################################
-
-#######################################################################################################
-*/

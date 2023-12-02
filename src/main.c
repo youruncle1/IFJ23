@@ -20,6 +20,7 @@ int main() {
     
     gen_Header(&gen);
     //gen_inbuild(&gen);
+
     parseProgram(&parser,tokenArray, &gen);
 
     print_Code(&gen);
