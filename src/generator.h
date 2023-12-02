@@ -55,7 +55,7 @@ void gen_FunctionFooter( generator_t* gen);
 
 void gen_FunctionCall( generator_t* gen, char* funcName, bool inFunc );
 
-void gen_FunctionParam( generator_t* gen, char* param, bool inFunc );
+void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCount);
 
 void gen_CreateFrame( generator_t* gen, bool inFunc );
 

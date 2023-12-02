@@ -157,7 +157,7 @@ void gen_LiteralReturn(generator_t* gen,token_t token){
 
 void gen_AssignReturnToVariable(generator_t* gen,token_t tokenToAssign,bool inFunc){
     if(inFunc){
-        add_Instruction( &gen->functionBody, "MOVE LF@%");
+        add_Instruction( &gen->functionBody, "MOVE LF@");
         add_Instruction( &gen->functionBody, tokenToAssign.data.String);
         add_Instruction( &gen->functionBody, " TF@%retval");
         add_newLine(&gen->functionBody);
@@ -196,7 +196,7 @@ void gen_FunctionCall( generator_t* gen, char* funcName, bool inFunc ) {
     }
 }
 
-void gen_FunctionParam( generator_t* gen, char* param, bool inFunc ) {
+void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCount) {
 
     if ( inFunc ) {
         if ( gen->isWrite == 0) {
@@ -204,8 +204,13 @@ void gen_FunctionParam( generator_t* gen, char* param, bool inFunc ) {
             add_Instruction( &gen->functionBody, param );
             add_newLine( &gen->functionBody );    
         } else {
-            add_Instruction( &gen->functionBody, "PUSHS LF@" );
-            add_Instruction( &gen->functionBody, param );
+            add_Instruction( &gen->functionBody, "DEFVAR TF@%" );
+            add_Int( &gen->functionBody, paramCount );
+            add_newLine( &gen->functionBody );
+            add_Instruction( &gen->functionBody, "MOVE TF@%" );
+            add_Int( &gen->functionBody, paramCount );
+            add_Instruction( &gen->functionBody, " LF@" );
+            add_Instruction(&gen->functionBody,param);
             add_newLine( &gen->functionBody );
         }
     } else {
@@ -214,8 +219,13 @@ void gen_FunctionParam( generator_t* gen, char* param, bool inFunc ) {
             add_Instruction( &gen->mainBody, param );
             add_newLine( &gen->mainBody );    
         } else {
-            add_Instruction( &gen->mainBody, "PUSHS GF@" );
-            add_Instruction( &gen->mainBody, param );
+            add_Instruction( &gen->mainBody, "DEFVAR TF@%" );
+            add_Int( &gen->mainBody, paramCount );
+            add_newLine( &gen->mainBody );
+            add_Instruction( &gen->mainBody, "MOVE TF@%" );
+            add_Int( &gen->mainBody, paramCount );
+            add_Instruction( &gen->mainBody, " GF@" );
+            add_Instruction(&gen->mainBody,param);
             add_newLine( &gen->mainBody );
         }
     }
@@ -948,7 +958,7 @@ void gen_COALESCE( generator_t* gen ) {
 void gen_LE( generator_t* gen ) {
     add_Instruction( &gen->functions, "JUMP _skip_LE\n"
                                       "LABEL _LE\n" 
-                                      "CREAFRAME\n"
+                                      "CREATEFRAME\n"
                                       "PUSHFRAME\n"
                                       "DEFVAR LF@right\n"
                                       "DEFVAR LF@left\n"
@@ -956,12 +966,12 @@ void gen_LE( generator_t* gen ) {
                                       "POPS LF@right\n"
                                       "POPS LF@left\n"
                                       "LT LF@result LF@left LF@right\n"
-                                      "JUMPIFEQ ?is_false LF@result bool@false\n"
+                                      "JUMPIFEQ ?is_false1 LF@result bool@false\n"
                                       "EQ LF@result LF@left LF@right\n"
-                                      "JUMPIFEQ ?is_false LF@result bool@false\n"
+                                      "JUMPIFEQ ?is_false1 LF@result bool@false\n"
                                       "MOVE GF@&bool bool@true\n"
                                       "JUMP ?end_LE\n"
-                                      "label ?is_false\n"
+                                      "label ?is_false1\n"
                                       "MOVE GF@&bool bool@false\n"
                                       "LABEL ?end_LE\n"
                                       "POPFRAME\n"
@@ -972,8 +982,8 @@ void gen_LE( generator_t* gen ) {
 
 void gen_GE( generator_t* gen ) {
     add_Instruction( &gen->functions, "JUMP _skip_GE\n"
-                                      "LABEL _GE\n" 
-                                      "CREAFRAME\n"
+                                      "LABEL _GE\n"
+                                      "CREATEFRAME\n"
                                       "PUSHFRAME\n"
                                       "DEFVAR LF@right\n"
                                       "DEFVAR LF@left\n"
@@ -981,12 +991,12 @@ void gen_GE( generator_t* gen ) {
                                       "POPS LF@right\n"
                                       "POPS LF@left\n"
                                       "GT LF@result LF@left LF@right\n"
-                                      "JUMPIFEQ ?is_false LF@result bool@false\n"
+                                      "JUMPIFEQ ?is_false2 LF@result bool@false\n"
                                       "EQ LF@result LF@left LF@right\n"
-                                      "JUMPIFEQ ?is_false LF@result bool@false\n"
+                                      "JUMPIFEQ ?is_false2 LF@result bool@false\n"
                                       "MOVE GF@&bool bool@true\n"
                                       "JUMP ?end_GE\n"
-                                      "label ?is_false\n"
+                                      "label ?is_false2\n"
                                       "MOVE GF@&bool bool@false\n"
                                       "LABEL ?end_GE\n"
                                       "POPFRAME\n"
@@ -1029,11 +1039,11 @@ void gen_buildin_readInt(generator_t* gen){
                                     "DEFVAR LF@type\n"
                                     "READ LF@tmp1 int\n"
                                     "TYPE LF@type LF@tmp1\n"                           //check the type of input
-                                    "JUMPIFNEQ _retnil LF@type string@int\n"           //If the input is not int, return nil
+                                    "JUMPIFNEQ _retnil1 LF@type string@int\n"           //If the input is not int, return nil
                                     "PUSHS LF@tmp1\n"
                                     "POPFRAME\n"
                                     "RETURN\n"
-                                    "LABEL _retnil\n"
+                                    "LABEL _retnil1\n"
                                     "PUSHS nil@nil\n"
                                     "POPFRAME\n"
                                     "RETURN\n"
@@ -1051,11 +1061,11 @@ void gen_buildin_readDouble(generator_t* gen){
                                     "DEFVAR LF@type\n"
                                     "READ LF@tmp1 float\n"
                                     "TYPE LF@type LF@tmp1\n"
-                                    "JUMPIFNEQ _retnil LF@type string@float\n"
+                                    "JUMPIFNEQ _retnil2 LF@type string@float\n"
                                     "PUSHS LF@tmp1\n"
                                     "POPFRAME\n"
                                     "RETURN\n"
-                                    "LABEL _retnil\n"
+                                    "LABEL _retnil2\n"
                                     "PUSHS nil@nil\n"
                                     "POPFRAME\n"
                                     "RETURN\n"
@@ -1067,13 +1077,13 @@ void gen_buildin_Int2Double(generator_t* gen){
 
     add_Instruction(&gen->functions, "JUMP _skip_Int2Double\n"
                                     "LABEL Int2Double\n"
-                                    "CREATEFRAME\n"
                                     "PUSHFRAME\n"
                                     "DEFVAR LF@tmp2\n"
                                     "DEFVAR LF@tmp1\n"
-                                    "POPS LF@tmp2\n"
+                                    "DEFVAR LF@%retval\n"
+                                    "MOVE LF@tmp2 LF@%1\n"
                                     "INT2FLOAT LF@tmp1 LF@tmp2\n"
-                                    "PUSHS LF@tmp1\n"
+                                    "MOVE LF@%retval LF@tmp1\n"
                                     "POPFRAME\n"
                                     "RETURN\n"
                                     "LABEL _skip_Int2Double\n" 
@@ -1132,17 +1142,17 @@ void gen_buildin_substring(generator_t* gen){
                                     "DEFVAR LF@cmp\n"                           //help var to store result of comparison
                                     "#Guard functionality\n"
                                     "LT LF@cmp LF@i int@0\n"                    //Compare = i < 0
-                                    "JUMPIFEQ _retnil LF@cmp bool@true\n"       //jump to retnil if i < 0
+                                    "JUMPIFEQ _retnil3 LF@cmp bool@true\n"       //jump to retnil if i < 0
                                     "LT LF@cmp LF@j int@0\n"                    //compare = j < 0
-                                    "JUMPIFEQ _retnil LF@cmp bool@true\n"       //jump to retnil if j < 0
+                                    "JUMPIFEQ _retnil3 LF@cmp bool@true\n"       //jump to retnil if j < 0
                                     "GT LF@cmp LF@i LF@j\n"                     //compare = i > j
-                                    "JUMPIFEQ _retnil LF@cmp bool@true\n"       //jump to retnil if j < j
+                                    "JUMPIFEQ _retnil3 LF@cmp bool@true\n"       //jump to retnil if j < j
                                     "EQ LF@cmp LF@i LF@len\n"                   //compare = i = len
-                                    "JUMPIFEQ _retnil LF@cmp bool@true\n"       //jump to retnil if i = len
+                                    "JUMPIFEQ _retnil3 LF@cmp bool@true\n"       //jump to retnil if i = len
                                     "GT LF@cmp LF@i LF@len\n"                   //compare = i > len
-                                    "JUMPIFEQ _retnil LF@cmp bool@true\n"       //jump to retnil if j > len
+                                    "JUMPIFEQ _retnil3 LF@cmp bool@true\n"       //jump to retnil if j > len
                                     "GT LF@cmp LF@j LF@len\n"                   //compare = j > len
-                                    "JUMPIFEQ _retnil LF@cmp bool@true\n"       //jump to retnil if j > len
+                                    "JUMPIFEQ _retnil3 LF@cmp bool@true\n"       //jump to retnil if j > len
                                     "#Making of substring\n"
                                     "DEFVAR LF@c\n"                             //here the chars of substring will be stored
                                     "DEFVAR LF@resultString\n"
@@ -1157,7 +1167,7 @@ void gen_buildin_substring(generator_t* gen){
                                     "PUSHS LF@resultString\n"
                                     "POPFRAME\n"
                                     "RETURN\n"
-                                    "LABEL _retnil\n"
+                                    "LABEL _retnil3\n"
                                     "PUSHS nil@nil\n"
                                     "POPFRAME\n"
                                     "RETURN\n"

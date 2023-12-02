@@ -1,12 +1,4 @@
-func bar(_ param : String) -> String {
-    write("bar","\n")
-    let r : String = foo("ahoj")
-    return r
-}
-func foo(_ par : String) -> String {
-    write("foo","\n")
-    let ret = bar("more")
-    return ret
-}
-bar("in")
+var result = Int2Double(10)
+write(result)
+
 

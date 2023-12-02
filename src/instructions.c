@@ -82,6 +82,7 @@ void clear_Tape( instructionTape_t* tape ) {
     tape->len = 0;
     tape->capacity = INIT_CAPACITY;
     tape->data = (char*)malloc(INIT_CAPACITY * sizeof(char));
+    tape->data[0] = '\0';
 }
 
 

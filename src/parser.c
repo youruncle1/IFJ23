@@ -924,7 +924,8 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected ':', ',' or ')' after identifier");
         }
 
-        //gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction);
+
+        gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1);
 
     }
         // Token 2: Literal found
