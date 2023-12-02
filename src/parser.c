@@ -89,7 +89,16 @@ token_t token_lookahead(parser_t *parser, TokenArray *tokenArray) {
     }
     //return tokenArray->tokens[parser->TKAIndex];
 }
-
+token_t token_lookback(parser_t *parser, TokenArray *tokenArray) {
+    if (parser->TKAIndex > 0) {
+        unsigned int prev_idx = parser->TKAIndex - 1;
+        return tokenArray->tokens[prev_idx];
+    } else {
+        // should never happen...
+        handle_error(INTERNAL_COMPILER_ERROR, 0, "OUT OF TOKENARRAY BOUNDS");
+        return tokenArray->tokens[parser->TKAIndex];
+    }
+}
 void check_next_token(parser_t *parser, TokenArray *tokenArray, tk_type_t expectedType) {
     parser_get_next_token(parser, tokenArray);
 
@@ -219,7 +228,8 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator
 
     parser_get_next_token(parser, tokenArray);                        // Identifier
 
-    gen_FunctionHeader( gen, parser->current_token.data.String );
+    Node *node = search(parser->global_frame, parser->current_token.data.String);
+    gen_FunctionHeader( gen, parser->current_token.data.String ,node);
 
     parser->current_func = search(parser->global_frame, parser->current_token.data.String);
 
@@ -227,6 +237,7 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator
 
     while (parser->current_token.type != TK_LBRACE) {                 // skip until '{'
         parser_get_next_token(parser, tokenArray);
+
     }
     parser_get_next_token(parser, tokenArray);
 
@@ -238,6 +249,7 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator
     // CHECK CI EXISTOVAL RETURN KED SA PRESLO TELO FUNCKIE
 
 
+    gen_FunctionFooter(gen);
     parser->inFunction = false;
     parser->hasReturn = false;
     parser->scopeDepth--;                                             // scopeDepth should be 0 after this!!!
@@ -318,7 +330,9 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
     token_t lookAheadToken = token_lookahead(parser, tokenArray);
 
     // Check for type
+    token_t varToAssign = parser->current_token;
     if (lookAheadToken.type == TK_COLON) {
+
         parser_get_next_token(parser, tokenArray); // Consume ':' token
         parser_get_next_token(parser, tokenArray); // Consume datatype token
         if (!is_token_datatype(parser->current_token.type)) {
@@ -346,6 +360,8 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
             if (foundType == TK_KW_NIL){
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Cannot assign a void function");
             }
+
+            gen_AssignReturnToVariable(gen,varToAssign,parser->inFunction);
 
         } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))
                    || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
@@ -409,17 +425,17 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
         switch (parser->current_token.type){
             case(TK_INT):
                 sprintf(buffer, "%lld", parser->current_token.data.Int);
-                gen_AssignVal( gen, buffer, parser->inFunction, " int@" );
+                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " int@" );
                 break;
             case(TK_DOUBLE):
-                sprintf(buffer, "%f", parser->current_token.data.Double);
-                gen_AssignVal( gen, buffer, parser->inFunction, " float@" );
+                sprintf(buffer, "%a", parser->current_token.data.Double);
+                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " float@" );
                 break;
             case(TK_STRING):
-                gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " string@" );
+                gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, " string@" );
                 break;
             case(TK_BOOLEAN):
-                gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " bool@" );
+                gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, " bool@" );
                 break;
             default:
                 break; 
@@ -636,11 +652,14 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
                 if (!node->symbol.isInit){
                     handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Returning an uninitialized variable");
                 }
+                gen_IdentifierReturn(gen,parser->current_token);
 
             } else {
                 // literal
                 foundType = convert_literal_to_datatype(parser->current_token.type);
                 // check ci sedi foundtype s datovym typom prave definovanej premennej alebo prirad ak nema
+
+                gen_LiteralReturn(gen,parser->current_token);
             }
         } else {
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected expression after return statement in non-void function");
@@ -657,6 +676,7 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
 
 void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
 
+    gen_CreateFrame(gen,parser->inFunction);
     token_t funcToken = parser->current_token; // udrzi nazov funkcie
     gen->isWrite = strcmp(funcToken.data.String, "write");
 
@@ -722,6 +742,7 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
             }
         }
     } else {
+
         for (int i = 0; i < parsedParamCount; i++){
 
             if (strcmp(functionNode->symbol.parameters[i].name, "_") != 0){
@@ -899,9 +920,9 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
         }
 
         //If we are not calling write, and the param is variable, generate it
-        if (gen->isWrite != 0){
+        /*if (gen->isWrite != 0){
             gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction);
-        }
+        }*/
     }
         // Token 2: Literal found
     else if (is_token_literal(parser->current_token.type)) {
@@ -917,15 +938,15 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
             switch( (*parsedParameters)[parsedParamCount].type ) {
                 case TK_KW_INT:
                 case TK_KW_INT_OPT:
-                    gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction );
+                    gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction,parsedParamCount + 1 );
                     break;
                 case TK_KW_DOUBLE:
                 case TK_KW_DOUBLE_OPT:
-                    gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction );
+                    gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction, parsedParamCount + 1 );
                     break;
                 case TK_KW_STRING:
                 case TK_KW_STRING_OPT:
-                    gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction );
+                    gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction, parsedParamCount + 1);
                     break;
                 case TK_KW_NIL:
                     gen_FunctionParamNil( gen, parser->inFunction );
@@ -1042,17 +1063,17 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
         switch (parser->current_token.type){
             case(TK_INT):
                 sprintf(buffer, "%lld", parser->current_token.data.Int);
-                gen_AssignVal( gen, buffer, parser->inFunction, " int@" );
+                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " int@" );
                 break;
             case(TK_DOUBLE):
-                sprintf(buffer, "%f", parser->current_token.data.Double);
-                gen_AssignVal( gen, buffer, parser->inFunction, " float@" );
+                sprintf(buffer, "%a", parser->current_token.data.Double);
+                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " float@" );
                 break;
             case(TK_STRING):
-                gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " string@" );
+                gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, " string@" );
                 break;
             case(TK_BOOLEAN):
-                gen_AssignVal( gen, parser->current_token.data.String, parser->inFunction, " bool@" );
+                gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, " bool@" );
                 break;
             default:
                 break; 
