@@ -14,6 +14,8 @@ authors: xrusna08
 #include <stdio.h>
 #include <stdbool.h>
 #include "instructions.h"
+#include "symtable.h"
+#include "scanner.h"
 
 
 typedef struct{
@@ -41,7 +43,13 @@ void gen_inbuild(generator_t* gen);
 
 void gen_VarDefinition( generator_t* gen, char* name, bool inFunc );
 
-void gen_FunctionHeader( generator_t* gen, char* funcName );
+void gen_FunctionHeader( generator_t* gen, char* funcName,Node* function);
+
+void gen_LiteralReturn(generator_t* gen,token_t token);
+
+void gen_AssignReturnToVariable(generator_t* gen,token_t tokenToAssign,bool inFunc);
+
+void gen_IdentifierReturn(generator_t* gen,token_t token);
 
 void gen_FunctionFooter( generator_t* gen);
 
@@ -49,17 +57,19 @@ void gen_FunctionCall( generator_t* gen, char* funcName, bool inFunc );
 
 void gen_FunctionParam( generator_t* gen, char* param, bool inFunc );
 
-void gen_FunctionParamInt( generator_t* gen, long val, bool inFunc );
+void gen_CreateFrame( generator_t* gen, bool inFunc );
 
-void gen_FunctionParamDouble( generator_t* gen, double val, bool inFunc );
+void gen_FunctionParamInt( generator_t* gen, long val, bool inFunc, int paramCount);
 
-void gen_FunctionParamString( generator_t* gen, char* str, bool inFunc );
+void gen_FunctionParamDouble( generator_t* gen, double val, bool inFunc, int paramCount);
+
+void gen_FunctionParamString( generator_t* gen, char* str, bool inFunc, int paramCount);
 
 void gen_FunctionParamNil( generator_t* gen, bool inFunc );
 
 void gen_Function( generator_t* gen );
 
-void gen_AssignVal( generator_t* gen, char* val, bool inFunc, char* type );
+void gen_AssignVal( generator_t* gen, char* varName,  char* val, bool inFunc, char* type );
 
 void gen_IfThenElse( generator_t* gen, bool inFunc);
 

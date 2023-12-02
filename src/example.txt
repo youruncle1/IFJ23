@@ -1,2 +1,11 @@
-let HOVNISKO : Int = 20
-write(HOVNISKO, 23, "toto je stringeroo\ntoto je string na novom riadku s mriezkou#\n", 0.999999)
+func bar(with param : String) -> String {
+    let r : String = foo(param)
+    return r
+}
+func foo(_ par : String) -> String {
+    let ret = bar(with: par)
+    return ret
+}
+bar(with: "ahoj")
+
+

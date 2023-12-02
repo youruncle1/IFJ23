@@ -51,6 +51,8 @@ void parser_get_previous_token(parser_t *parser, TokenArray *tokenArray);
 
 token_t token_lookahead(parser_t *parser, TokenArray *tokenArray);
 
+token_t token_lookback(parser_t *parser, TokenArray *tokenArray);
+
 void check_next_token(parser_t *parser, TokenArray *tokenArray, tk_type_t expectedType);
 
 bool check_token_type(parser_t *parser, tk_type_t expectedType);
