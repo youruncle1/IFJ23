@@ -1,4 +1,4 @@
-var result = Int2Double(10)
+var result = chr(256)
 write(result)
 
 
