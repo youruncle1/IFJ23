@@ -71,10 +71,13 @@ void add_Char( instructionTape_t* tape, char c ) {
     char str[2];
     str[0] = c;
     str[1] = '\0';
-    add_Instruction( tape, &str );
+    add_Instruction( tape, str );
 }
 
 void clear_Tape( instructionTape_t* tape ) {
+    if(tape->data == NULL){
+        return;
+    }
     free( tape->data );
     tape->len = 0;
     tape->capacity = INIT_CAPACITY;

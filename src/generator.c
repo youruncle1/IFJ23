@@ -102,7 +102,7 @@ LABEL _skip_functionName
 
 
 void gen_FunctionHeader( generator_t* gen, char* funcName,Node* function) {
-
+    clear_Tape(&gen->functionHead);
     add_Instruction( &gen->functionName, funcName );
 
     add_Instruction( &gen->functionHead, "JUMP _skip_" );
@@ -232,16 +232,6 @@ void gen_CreateFrame( generator_t* gen, bool inFunc ) {
 }
 
 void gen_FunctionParamInt( generator_t* gen, long val, bool inFunc, int paramCount) {
-
-    /*if ( inFunc ) {
-        add_Instruction( &gen->functionBody, "PUSHS int@" );
-        add_Int( &gen->functionBody, val );
-        add_newLine( &gen->functionBody );
-    } else {
-        add_Instruction( &gen->mainBody, "PUSHS int@" );
-        add_Int( &gen->mainBody, val );
-        add_newLine( &gen->mainBody );
-    }*/
     if ( inFunc ) {
       if (gen->isWrite == 0){
             add_Instruction( &gen->functionBody, "WRITE int@" );
@@ -273,7 +263,6 @@ void gen_FunctionParamInt( generator_t* gen, long val, bool inFunc, int paramCou
         add_newLine( &gen->mainBody );
       }
     }
-    //printf("func %s\n",gen->functionName.data);
 }
 
 void gen_FunctionParamDouble( generator_t* gen, double val, bool inFunc, int paramCount) {

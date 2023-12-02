@@ -1,11 +1,12 @@
-func bar(with param : String) -> String {
-    let r : String = foo(param)
+func bar(_ param : String) -> String {
+    write("bar","\n")
+    let r : String = foo("ahoj")
     return r
 }
 func foo(_ par : String) -> String {
-    let ret = bar(with: par)
+    write("foo","\n")
+    let ret = bar("more")
     return ret
 }
-bar(with: "ahoj")
-
+bar("in")
 

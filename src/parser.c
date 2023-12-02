@@ -676,10 +676,13 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
 
 void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
 
-    gen_CreateFrame(gen,parser->inFunction);
+
     token_t funcToken = parser->current_token; // udrzi nazov funkcie
     gen->isWrite = strcmp(funcToken.data.String, "write");
 
+    if(gen->isWrite != 0 ){
+        gen_CreateFrame(gen,parser->inFunction);
+    }
     parser_get_next_token(parser, tokenArray); // consume '('
 
     Parameter *parsedParameters = NULL;
@@ -921,7 +924,7 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected ':', ',' or ')' after identifier");
         }
 
-        gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction);
+        //gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction);
 
     }
         // Token 2: Literal found
@@ -938,15 +941,15 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
         switch( (*parsedParameters)[parsedParamCount].type ) {
             case TK_KW_INT:
             case TK_KW_INT_OPT:
-                gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction );
+                gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction, parsedParamCount + 1 );
                 break;
             case TK_KW_DOUBLE:
             case TK_KW_DOUBLE_OPT:
-                gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction );
+                gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction, parsedParamCount + 1 );
                 break;
             case TK_KW_STRING:
             case TK_KW_STRING_OPT:
-                gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction );
+                gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction, parsedParamCount + 1 );
                 break;
             case TK_KW_NIL:
                 gen_FunctionParamNil( gen, parser->inFunction );
