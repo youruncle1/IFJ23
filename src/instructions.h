@@ -24,18 +24,6 @@ typedef struct{
     char* data;             //instructions
 }instructionTape_t;
 
-typedef struct DLLParam{
-    char* param_str;
-    struct DLLParam* next;
-    struct DLLParam* prev;
-} *DLLParam;
-
-typedef struct {
-    DLLParam first;
-    DLLParam last;
-    DLLParam activ;
-} DLLParamList;
-
 #define INIT_CAPACITY 100
 
 instructionTape_t init_Tape();

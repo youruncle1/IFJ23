@@ -29,6 +29,7 @@ typedef struct{
     int selectCount;
     int iterCount;
     int isWrite;
+    int paramCount;
 
 }generator_t;
 
@@ -73,6 +74,8 @@ void gen_While( generator_t* gen, bool inFunc );
 void gen_WhileCond( generator_t* gen, bool inFunc );
 
 void gen_WhileEnd( generator_t* gen, bool inFunc );
+
+// void gen_WriteParams( generator_t* gen, tk_type_t type, char* name, bool inFunc );
 
 // void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc );
 
