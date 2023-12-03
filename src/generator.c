@@ -27,6 +27,8 @@ generator_t gen_Init(){
     gen.selectCount = 0;
     gen.iterCount = 0;
     gen.paramCount = 0;
+    gen.isReturn = false;
+    gen.exprResult = init_Tape();
     return gen;
 }
 
@@ -71,17 +73,24 @@ void gen_VarDefinition( generator_t* gen, char* name, bool inFunc ) {
 }
 
 void gen_AssignVal( generator_t* gen, char* varName, char* val, bool inFunc, char* type ) {
-    //clear_Tape(&gen->varName);
     if ( inFunc ) {
         add_Instruction( &gen->functionBody, "MOVE LF@" );
         add_Instruction( &gen->functionBody, varName );
-        add_Instruction( &gen->functionBody, type );
+        if(strlen(type) != 0) {
+            add_Instruction(&gen->functionBody, type);
+        }else{
+            add_Instruction(&gen->functionBody, " LF@");
+        }
         add_Instruction( &gen->functionBody, val);
         add_newLine( &gen->functionBody);
     } else {
         add_Instruction( &gen->mainBody, "MOVE GF@" );
         add_Instruction( &gen->mainBody, varName );
-        add_Instruction( &gen->mainBody, type );
+        if(strlen(type) != 0) {
+            add_Instruction(&gen->mainBody, type);
+        }else{
+            add_Instruction(&gen->mainBody, " GF@");
+        }
         add_Instruction( &gen->mainBody, val);
         add_newLine( &gen->mainBody );
     }
@@ -168,6 +177,7 @@ void gen_AssignReturnToVariable(generator_t* gen,token_t tokenToAssign,bool inFu
         add_newLine(&gen->mainBody);
     }
 }
+
 void gen_FunctionFooter( generator_t* gen) {
 
     add_Instruction( &gen->functionFoot, "POPFRAME\n"
@@ -308,6 +318,126 @@ void gen_FunctionParamDouble( generator_t* gen, double val, bool inFunc, int par
         add_newLine( &gen->mainBody );
        }
     }
+}
+
+char* gen_convertString( char* string ) {
+
+    instructionTape_t tmpTape = init_Tape();
+    unsigned int length = strlen(string);
+
+    for ( unsigned int i = 0; i < length; i++ ) {
+        switch(string[i]) {
+            case 0:
+                add_Instruction( &tmpTape, "\\000" );
+                break;
+            case 1:
+                add_Instruction( &tmpTape, "\\001" );
+                break;
+            case 2:
+                add_Instruction( &tmpTape, "\\002" );
+                break;
+            case 3:
+                add_Instruction( &tmpTape, "\\003" );
+                break;
+            case 4:
+                add_Instruction( &tmpTape, "\\004" );
+                break;
+            case 5:
+                add_Instruction( &tmpTape, "\\005" );
+                break;
+            case 6:
+                add_Instruction( &tmpTape, "\\006" );
+                break;
+            case 7:
+                add_Instruction( &tmpTape, "\\007" );
+                break;
+            case 8:
+                add_Instruction( &tmpTape, "\\008" );
+                break;
+            case 9:
+                add_Instruction( &tmpTape, "\\009" );
+                break;
+            case 10:
+                add_Instruction( &tmpTape, "\\010" );
+                break;
+            case 11:
+                add_Instruction( &tmpTape, "\\011" );
+                break;
+            case 12:
+                add_Instruction( &tmpTape, "\\012" );
+                break;
+            case 13:
+                add_Instruction( &tmpTape, "\\013" );
+                break;
+            case 14:
+                add_Instruction( &tmpTape, "\\014" );
+                break;
+            case 15:
+                add_Instruction( &tmpTape, "\\015" );
+                break;
+            case 16:
+                add_Instruction( &tmpTape, "\\016" );
+                break;
+            case 17:
+                add_Instruction( &tmpTape, "\\017" );
+                break;
+            case 18:
+                add_Instruction( &tmpTape, "\\018" );
+                break;
+            case 19:
+                add_Instruction( &tmpTape, "\\019" );
+                break;
+            case 20:
+                add_Instruction( &tmpTape, "\\020" );
+                break;
+            case 21:
+                add_Instruction( &tmpTape, "\\021" );
+                break;
+            case 22:
+                add_Instruction( &tmpTape, "\\022" );
+                break;
+            case 23:
+                add_Instruction( &tmpTape, "\\023" );
+                break;
+            case 24:
+                add_Instruction( &tmpTape, "\\024" );
+                break;
+            case 25:
+                add_Instruction( &tmpTape, "\\025" );
+                break;
+            case 26:
+                add_Instruction( &tmpTape, "\\026" );
+                break;
+            case 27:
+                add_Instruction( &tmpTape, "\\027" );
+                break;
+            case 28:
+                add_Instruction( &tmpTape, "\\028" );
+                break;
+            case 29:
+                add_Instruction( &tmpTape, "\\029" );
+                break;
+            case 30:
+                add_Instruction( &tmpTape, "\\030" );
+                break;
+            case 31:
+                add_Instruction( &tmpTape, "\\031" );
+                break;
+            case 32:
+                add_Instruction( &tmpTape, "\\032" );
+                break;
+            case 35:
+                add_Instruction( &tmpTape, "\\035" );
+                break;
+            case 92:
+                add_Instruction( &tmpTape, "\\092" );
+                break;
+            default:
+                add_Char( &tmpTape, string[i] );
+                break;
+        }
+    }
+    return tmpTape.data;
 }
 
 void gen_FunctionParamString( generator_t* gen, char* str, bool inFunc, int paramCount ) {
@@ -496,57 +626,65 @@ LABEL _else_[selectCount]
 fakse_statenebts
 LABEL _if_done[selectCount]
 */
-void gen_IfThenElse( generator_t* gen, bool inFunc) {
+void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc) {
 
-    //eval expression somehow
+    //Increment the count of selections to differenriete between other flow control statements
+    if ( scopeDepth <= 1) {gen->selectCount++;}
+
     if ( inFunc ) {
         add_Instruction( &gen->functionBody, "JUMPIFEQ _else_" );
         add_Int( &gen->functionBody, gen->selectCount );
+        add_Int( &gen->functionBody, scopeDepth );
         add_Instruction( &gen->functionBody, " GF@&bool bool@false\n" );
     } else {
         add_Instruction( &gen->mainBody, "JUMPIFEQ _else_" );
         add_Int( &gen->mainBody, gen->selectCount );
+        add_Int( &gen->mainBody, scopeDepth );
         add_Instruction( &gen->mainBody, " GF@&bool bool@false\n" );
     }
- }
+}
 
-void gen_IfDone( generator_t* gen, bool inFunc ) {
+void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
         add_Instruction( &gen->functionBody, "JUMP _if_done" );
         add_Int( &gen->functionBody, gen->selectCount );
+        add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
     } else {
         add_Instruction( &gen->mainBody, "JUMP _if_done" );
         add_Int( &gen->mainBody, gen->selectCount );
+        add_Int( &gen->mainBody, scopeDepth );
         add_newLine( &gen->mainBody );
     }
- }
+}
 
-void gen_IfDone_End( generator_t* gen, bool inFunc ) {
+void gen_IfDone_End( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
         add_Instruction( &gen->functionBody, "LABEL _if_done" );
         add_Int( &gen->functionBody, gen->selectCount );
+        add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
     } else {
         add_Instruction( &gen->mainBody, "LABEL _if_done" );
         add_Int( &gen->mainBody, gen->selectCount );
+        add_Int( &gen->mainBody, scopeDepth );
         add_newLine( &gen->mainBody );
     }
-    //Increment the count of selections to differenriete between other flow control statements
-    gen->selectCount++;
- }
+}
 
-void gen_IfThenElse_End( generator_t* gen, bool inFunc ) {
+void gen_IfThenElse_End( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
         add_Instruction( &gen->functionBody, "LABEL _else_" );
         add_Int( &gen->functionBody, gen->selectCount );
+        add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
     } else {
         add_Instruction( &gen->mainBody, "LABEL _else_" );
         add_Int( &gen->mainBody, gen->selectCount );
+        add_Int( &gen->mainBody, scopeDepth );
         add_newLine( &gen->mainBody );
     }
 }
@@ -559,62 +697,70 @@ statements
 JUMP _while_[iterCount]                                 //  \
 LABEL _while_end_[iterCount]                            //   gen_WhileEnd
 */
-void gen_While( generator_t* gen, bool inFunc ) {
+void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
+    if ( scopeDepth <= 1 ) {gen->iterCount++;}
     if ( inFunc ) {
         add_Instruction( &gen->functionBody, "LABEL _while_" );
         add_Int( &gen->functionBody, gen->iterCount );
+        add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
 
         //eval expression somehow
     } else {
         add_Instruction( &gen->mainBody, "LABEL _while_" );
         add_Int( &gen->mainBody, gen->iterCount );
+        add_Int( &gen->mainBody, scopeDepth );
         add_newLine( &gen->mainBody );
 
         //eval expression somehow
     }
 }
 
-void gen_WhileCond( generator_t* gen, bool inFunc ) {
+void gen_WhileCond( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
         add_Instruction( &gen->functionBody, "JUMPIFEQ _while_end_" );
         add_Int( &gen->functionBody, gen->iterCount );
+        add_Int( &gen->functionBody, scopeDepth );
         add_Instruction( &gen->functionBody, " GF@&bool bool@true\n");
     } else {
         add_Instruction( &gen->mainBody, "JUMPIFEQ _while_end_" );
         add_Int( &gen->mainBody, gen->iterCount );
+        add_Int( &gen->mainBody, scopeDepth );
         add_Instruction( &gen->mainBody, " GF@&bool bool@true\n");
     }
 }
 
-void gen_WhileEnd( generator_t* gen, bool inFunc ) {
+void gen_WhileEnd( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
 
         //add jump instruction
         add_Instruction( &gen->functionBody, "JUMP _while_" );
         add_Int( &gen->functionBody, gen->iterCount );
+        add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
 
         //add label for while end
         add_Instruction( &gen->functionBody, "LABEL _while_end_" );
         add_Int( &gen->functionBody, gen->iterCount );
+        add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
     } else {
 
         //add jump instruction
         add_Instruction( &gen->mainBody, "JUMP _while_" );
         add_Int( &gen->mainBody, gen->iterCount );
+        add_Int( &gen->mainBody, scopeDepth );
         add_newLine( &gen->mainBody );
 
         //add label for while end
         add_Instruction( &gen->mainBody, "LABEL _while_end_" );
         add_Int( &gen->mainBody, gen->iterCount );
+        add_Int( &gen->mainBody, scopeDepth );
         add_newLine( &gen->mainBody );
     }
-    gen->iterCount++;
 }
 
 // void convert_Type( generator_t* gen, ASTNode* node, ASTNode* childNode, bool inFunc ) {
@@ -653,11 +799,15 @@ void boolian_convert_Type( generator_t* gen, ASTNode* node, bool inFunc ) {
     }
 }
 
+void gen_SaveExprResult( generator_t* gen, char* name ) {
+    add_Instruction( &gen->exprResult, name );
+}
+
 void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
 
     if ( node == NULL ) return;
 
-    char buf[30];
+    char buf[255];
     switch( node->token.type ) {
         case TK_PLUS:
             gen_Expr( gen, node->left, inFunc );
@@ -668,19 +818,19 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "ADDS\n" );
-                add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
-                add_Instruction( &gen->functionBody, "MOVE " );
-                add_Instruction( &gen->functionBody, "LF@" );
-                add_Instruction( &gen->functionBody, gen->varName.data );
-                add_Instruction( &gen->functionBody, " GF@&tmp1\n" );
+                add_Instruction( &gen->functionBody, "POPS LF@" );
+                if(gen->isReturn){
+                    add_Instruction( &gen->functionBody, "%retval\n" );
+                }else{
+                    add_Instruction( &gen->functionBody, gen->exprResult.data );
+                }
             } else {
                 add_Instruction( &gen->mainBody, "ADDS\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
-                add_Instruction( &gen->mainBody, "MOVE " );
-                add_Instruction( &gen->mainBody, "GF@" );
-                add_Instruction( &gen->mainBody, gen->varName.data );
-                add_Instruction( &gen->mainBody, " GF@&tmp1\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@" );
+                add_Instruction( &gen->mainBody, gen->exprResult.data );
+                add_newLine( &gen->mainBody );
             }
+            clear_Tape( &gen->exprResult );
             break;
 
         case TK_MINUS:
@@ -692,19 +842,19 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "SUBS\n" );
-                add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
-                add_Instruction( &gen->functionBody, "MOVE " );
-                add_Instruction( &gen->functionBody, "LF@" );
-                add_Instruction( &gen->functionBody, gen->varName.data );
-                add_Instruction( &gen->functionBody, " GF@&tmp1\n" );
+                add_Instruction( &gen->functionBody, "POPS LF@" );
+                if(gen->isReturn){
+                    add_Instruction( &gen->functionBody, "%retval\n" );
+                }else{
+                    add_Instruction( &gen->functionBody, gen->exprResult.data );
+                }
             } else {
                 add_Instruction( &gen->mainBody, "SUBS\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
-                add_Instruction( &gen->mainBody, "MOVE " );
-                add_Instruction( &gen->mainBody, "GF@" );
-                add_Instruction( &gen->mainBody, gen->varName.data );
-                add_Instruction( &gen->mainBody, " GF@&tmp1\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@" );
+                add_Instruction( &gen->mainBody, gen->exprResult.data );
+                add_newLine( &gen->mainBody );
             }
+            clear_Tape( &gen->exprResult );
             break;
 
         case TK_MUL:
@@ -716,19 +866,19 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "MULS\n" );
-                add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
-                add_Instruction( &gen->functionBody, "MOVE " );
-                add_Instruction( &gen->functionBody, "LF@" );
-                add_Instruction( &gen->functionBody, gen->varName.data );
-                add_Instruction( &gen->functionBody, " GF@&tmp1\n" );
+                add_Instruction( &gen->functionBody, "POPS LF@" );
+                if(gen->isReturn){
+                    add_Instruction( &gen->functionBody, "%retval\n" );
+                }else{
+                    add_Instruction( &gen->functionBody, gen->exprResult.data );
+                }
             } else {
                 add_Instruction( &gen->mainBody, "MULS\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
-                add_Instruction( &gen->mainBody, "MOVE " );
-                add_Instruction( &gen->mainBody, "GF@" );
-                add_Instruction( &gen->mainBody, gen->varName.data );
-                add_Instruction( &gen->mainBody, " GF@&tmp1\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@" );
+                add_Instruction( &gen->mainBody, gen->exprResult.data );
+                add_newLine( &gen->mainBody );
             }
+            clear_Tape( &gen->exprResult );
             break;
 
         case TK_DIV:
@@ -742,36 +892,36 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             //Operandy su double
                 if ( inFunc ) {
                     add_Instruction( &gen->functionBody, "IDIVS\n" );
-                    add_Instruction( &gen->functionBody, "POPS GF@t&mp1\n" );
-                    add_Instruction( &gen->functionBody, "MOVE " );
-                    add_Instruction( &gen->functionBody, "LF@" );
-                    add_Instruction( &gen->functionBody, gen->varName.data );
-                    add_Instruction( &gen->functionBody, " GF@&tmp1\n" );
+                    add_Instruction( &gen->functionBody, "POPS LF@" );
+                    if(gen->isReturn){
+                        add_Instruction( &gen->functionBody, "%retval\n" );
+                    }else{
+                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    }
                 } else {
                     add_Instruction( &gen->mainBody, "IDIVS\n" );
-                    add_Instruction( &gen->mainBody, "POPS GF@t&mp1\n" );
-                    add_Instruction( &gen->mainBody, "MOVE " );
-                    add_Instruction( &gen->mainBody, "GF@" );
-                    add_Instruction( &gen->mainBody, gen->varName.data );
-                    add_Instruction( &gen->mainBody, " GF@&tmp1\n" );
+                    add_Instruction( &gen->mainBody, "POPS GF@" );
+                    add_Instruction( &gen->mainBody, gen->exprResult.data );
+                    add_newLine( &gen->mainBody );
                 }
+                clear_Tape( &gen->exprResult );
             } else {
             //Operandy su int
                 if ( inFunc ) {
                     add_Instruction( &gen->functionBody, "DIVS\n" );
-                    add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
-                    add_Instruction( &gen->functionBody, "MOVE " );
-                    add_Instruction( &gen->functionBody, "LF@" );
-                    add_Instruction( &gen->functionBody, gen->varName.data );
-                    add_Instruction( &gen->functionBody, " GF@&tmp1\n" );
+                    add_Instruction( &gen->functionBody, "POPS LF@" );
+                    if(gen->isReturn){
+                        add_Instruction( &gen->functionBody, "%retval\n" );
+                    }else{
+                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    }
                 } else {
                     add_Instruction( &gen->mainBody, "DIVS\n" );
-                    add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
-                    add_Instruction( &gen->mainBody, "MOVE " );
-                    add_Instruction( &gen->mainBody, "GF@" );
-                    add_Instruction( &gen->mainBody, gen->varName.data );
-                    add_Instruction( &gen->mainBody, " GF@&tmp1\n" );
+                    add_Instruction( &gen->mainBody, "POPS GF@" );
+                    add_Instruction( &gen->mainBody, gen->exprResult.data );
+                    add_newLine( &gen->mainBody );
                 }
+                clear_Tape( &gen->exprResult );
             }
             break;
 
@@ -792,51 +942,55 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
         case TK_NEQ:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            boolian_convert_Type( gen, node, inFunc );
+            //boolian_convert_Type( gen, node, inFunc );
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "EQS\n" );
-                add_Instruction( &gen->functionBody, "POPS GF@&bool\n" );
-                add_Instruction( &gen->functionBody, "NOT GF@&bool\n" );
+                add_Instruction( &gen->functionBody, "POPS GF@&tmp3\n" );
+                add_Instruction( &gen->functionBody, "NOT GF@&bool GF@&tmp3\n" );
             } else {
                 add_Instruction( &gen->mainBody, "EQS\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@&bool\n" );
-                add_Instruction( &gen->mainBody, "NOT GF@&bool\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@&tmp3\n" );
+                add_Instruction( &gen->mainBody, "NOT GF@&bool GF@&tmp3\n" );
             }
             break;
 
         case TK_LT:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            boolian_convert_Type( gen, node, inFunc );
+            // boolian_convert_Type( gen, node, inFunc );
 
             if ( inFunc ) {
-                add_Instruction( &gen->functionBody, "LTS\n" );
-                add_Instruction( &gen->functionBody, "POPS GF@&bool\n" );
+                add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
+                add_Instruction( &gen->functionBody, "POPS GF@&tmp2\n" );
+                add_Instruction( &gen->functionBody, "LT GF@&bool GF@&tmp1 GF@&tmp2\n" );
             } else {
-                add_Instruction( &gen->mainBody, "LTS\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@&bool\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@&tmp2\n" );
+                add_Instruction( &gen->mainBody, "LT GF@&bool GF@&tmp1 GF@&tmp2\n" );
             }
             break;
 
         case TK_GT:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            boolian_convert_Type( gen, node, inFunc );
+            // boolian_convert_Type( gen, node, inFunc );
 
             if ( inFunc ) {
-                add_Instruction( &gen->functionBody, "GTS\n" );
-                add_Instruction( &gen->functionBody, "POPS GF@&bool\n");            // pop the result in GF@&bool to use in comparisons
+                add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
+                add_Instruction( &gen->functionBody, "POPS GF@&tmp2\n" );
+                add_Instruction( &gen->functionBody, "GT GF@&bool GF@&tmp1 GF@&tmp2\n" );
             } else {
-                add_Instruction( &gen->mainBody, "GTS\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@&bool\n" );               // pop the result in GF@&bool to use in comparisons
+                add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
+                add_Instruction( &gen->mainBody, "POPS GF@&tmp2\n" );
+                add_Instruction( &gen->mainBody, "GT GF@&bool GF@&tmp1 GF@&tmp2\n" );
             }
             break;
 
         case TK_LE:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            boolian_convert_Type( gen, node, inFunc );
+            //boolian_convert_Type( gen, node, inFunc );
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "CALL _LE\n" );
@@ -848,7 +1002,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
         case TK_GE:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            boolian_convert_Type( gen, node, inFunc );
+            //boolian_convert_Type( gen, node, inFunc );
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "CALL _GE\n" );
@@ -947,17 +1101,17 @@ void gen_COALESCE( generator_t* gen ) {
                                       "POPS LF@left\n"
                                       "JUMPIFEQ ?is_nil LF@left nil@nil\n"
                                       "POPS LF@right\n"
-                                      "PUSHS LF@left\n"  
+                                      "PUSHS LF@left\n"
                                       "LABEL ?is_nil\n"
                                       "POPFRAME\n"
                                       "RETURN\n"
-                                      "LABEL _skip_COALESCE\n" 
-                                        );
+                                      "LABEL _skip_COALESCE\n"
+    );
 }
 
 void gen_LE( generator_t* gen ) {
     add_Instruction( &gen->functions, "JUMP _skip_LE\n"
-                                      "LABEL _LE\n" 
+                                      "LABEL _LE\n"
                                       "CREATEFRAME\n"
                                       "PUSHFRAME\n"
                                       "DEFVAR LF@right\n"
@@ -966,18 +1120,18 @@ void gen_LE( generator_t* gen ) {
                                       "POPS LF@right\n"
                                       "POPS LF@left\n"
                                       "LT LF@result LF@left LF@right\n"
-                                      "JUMPIFEQ ?is_false1 LF@result bool@false\n"
+                                      "JUMPIFEQ ?is_true1 LF@result bool@true\n"
                                       "EQ LF@result LF@left LF@right\n"
-                                      "JUMPIFEQ ?is_false1 LF@result bool@false\n"
-                                      "MOVE GF@&bool bool@true\n"
-                                      "JUMP ?end_LE\n"
-                                      "label ?is_false1\n"
+                                      "JUMPIFEQ ?is_true1 LF@result bool@true\n"
                                       "MOVE GF@&bool bool@false\n"
+                                      "JUMP ?end_LE\n"
+                                      "label ?is_true1\n"
+                                      "MOVE GF@&bool bool@true\n"
                                       "LABEL ?end_LE\n"
                                       "POPFRAME\n"
                                       "RETURN\n"
                                       "LABEL _skip_LE\n"
-                                      );
+    );
 }
 
 void gen_GE( generator_t* gen ) {
@@ -991,18 +1145,18 @@ void gen_GE( generator_t* gen ) {
                                       "POPS LF@right\n"
                                       "POPS LF@left\n"
                                       "GT LF@result LF@left LF@right\n"
-                                      "JUMPIFEQ ?is_false2 LF@result bool@false\n"
+                                      "JUMPIFEQ ?is_false2 LF@result bool@true\n"
                                       "EQ LF@result LF@left LF@right\n"
-                                      "JUMPIFEQ ?is_false2 LF@result bool@false\n"
-                                      "MOVE GF@&bool bool@true\n"
+                                      "JUMPIFEQ ?is_false2 LF@result bool@true\n"
+                                      "MOVE GF@&bool bool@false\n"
                                       "JUMP ?end_GE\n"
                                       "label ?is_false2\n"
-                                      "MOVE GF@&bool bool@false\n"
+                                      "MOVE GF@&bool bool@true\n"
                                       "LABEL ?end_GE\n"
                                       "POPFRAME\n"
                                       "RETURN\n"
                                       "LABEL _skip_GE\n\n"
-                                      );
+    );
 }
 
 /*
@@ -1129,7 +1283,6 @@ void gen_buildin_substring(generator_t* gen){
 
     add_Instruction(&gen->functions, "JUMP _skip_substring\n"
                                     "LABEL substring\n"
-                                    "CREATEFRAME\n"
                                     "PUSHFRAME\n"
                                     "DEFVAR LF@j\n"
                                     "DEFVAR LF@i\n"

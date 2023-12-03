@@ -26,6 +26,7 @@ typedef struct {
     Node* current_func_call;
     bool hasReturn;
     bool inFunction;
+    bool isReturn;
     unsigned int scopeDepth;
     unsigned int TKAIndex;
     unsigned int parsedParamCount;

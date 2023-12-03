@@ -28,10 +28,12 @@ typedef struct{
     instructionTape_t functionName;
     instructionTape_t varName;
     instructionTape_t stringParam;
+    instructionTape_t exprResult;
     int selectCount;
     int iterCount;
     int isWrite;
     int paramCount;
+    bool isReturn;
 
 }generator_t;
 
@@ -63,6 +65,8 @@ void gen_FunctionParamInt( generator_t* gen, long val, bool inFunc, int paramCou
 
 void gen_FunctionParamDouble( generator_t* gen, double val, bool inFunc, int paramCount);
 
+char* gen_convertString( char* string );
+
 void gen_FunctionParamString( generator_t* gen, char* str, bool inFunc, int paramCount);
 
 void gen_FunctionParamNil( generator_t* gen, bool inFunc );
@@ -71,21 +75,23 @@ void gen_Function( generator_t* gen );
 
 void gen_AssignVal( generator_t* gen, char* varName,  char* val, bool inFunc, char* type );
 
-void gen_IfThenElse( generator_t* gen, bool inFunc);
+void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc);
 
-void gen_IfDone( generator_t* gen, bool inFunc );
+void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
-void gen_IfDone_End( generator_t* gen, bool inFunc );
+void gen_IfDone_End( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
-void gen_IfThenElse_End( generator_t* gen, bool inFunc );
+void gen_IfThenElse_End( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
-void gen_While( generator_t* gen, bool inFunc );
+void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
-void gen_WhileCond( generator_t* gen, bool inFunc );
+void gen_WhileCond( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
-void gen_WhileEnd( generator_t* gen, bool inFunc );
+void gen_WhileEnd( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
 // void gen_WriteParams( generator_t* gen, tk_type_t type, char* name, bool inFunc );
+
+void gen_SaveExprResult( generator_t* gen, char* name );
 
 // void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc );
 
