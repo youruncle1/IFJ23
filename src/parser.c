@@ -582,6 +582,8 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
     } else if (parser->current_token.type == TK_KW_WHILE) {
         parser_get_next_token(parser, tokenArray); // Get token after 'while'
 
+        gen->isWhile = true;
+
         gen_While( gen, parser->scopeDepth, parser->inFunction );
 
         // start start ( 10
@@ -608,6 +610,8 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
         }
 
         gen_WhileEnd( gen, parser->scopeDepth, parser->inFunction );
+
+        gen->isWhile = false;
         //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
     } else {

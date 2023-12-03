@@ -34,6 +34,7 @@ typedef struct{
     int isWrite;
     int paramCount;
     bool isReturn;
+    bool isWhile;
 
 }generator_t;
 

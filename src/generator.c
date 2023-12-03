@@ -35,6 +35,7 @@ generator_t gen_Init(){
 void gen_Header( generator_t* gen ) {
     add_Instruction(&gen->header, ".IFJcode23\n"                    //every IFJcode23 needs to start with .IFJcode23 header
                                   "DEFVAR GF@&bool\n"               //
+                                  "DEFVAR GF@&boolEQ\n"
                                   "DEFVAR GF@&tmp1\n"               //Global variables
                                   "DEFVAR GF@&tmp2\n"               //
                                   "DEFVAR GF@&tmp3\n"               //
@@ -960,14 +961,30 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             gen_Expr( gen, node->right, inFunc );
             // boolian_convert_Type( gen, node, inFunc );
 
-            if ( inFunc ) {
-                add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
-                add_Instruction( &gen->functionBody, "POPS GF@&tmp2\n" );
-                add_Instruction( &gen->functionBody, "LT GF@&bool GF@&tmp1 GF@&tmp2\n" );
+            if ( gen->isWhile ){
+                if ( inFunc ) {
+                    add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
+                    add_Instruction( &gen->functionBody, "POPS GF@&tmp2\n" );
+                    add_Instruction( &gen->functionBody, "LT GF@&bool GF@&tmp1 GF@&tmp2\n" );
+                    add_Instruction( &gen->functionBody, "EQ GF@&boolEQ GF@&tmp1 GF@&tmp2\n");
+                    add_Instruction( &gen->functionBody, "OR GF@&bool GF@&boolEQ GF@&bool\n");
+                } else {
+                    add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
+                    add_Instruction( &gen->mainBody, "POPS GF@&tmp2\n" );
+                    add_Instruction( &gen->mainBody, "LT GF@&bool GF@&tmp1 GF@&tmp2\n" );
+                    add_Instruction( &gen->mainBody, "EQ GF@&boolEQ GF@&tmp1 GF@&tmp2\n");
+                    add_Instruction( &gen->mainBody, "OR GF@&bool GF@&boolEQ GF@&bool\n");
+                }
             } else {
-                add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@&tmp2\n" );
-                add_Instruction( &gen->mainBody, "LT GF@&bool GF@&tmp1 GF@&tmp2\n" );
+                if ( inFunc ) {
+                    add_Instruction( &gen->functionBody, "POPS GF@&tmp2\n" );
+                    add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
+                    add_Instruction( &gen->functionBody, "LT GF@&bool GF@&tmp1 GF@&tmp2\n" );
+                } else {
+                    add_Instruction( &gen->mainBody, "POPS GF@&tmp2\n" );
+                    add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
+                    add_Instruction( &gen->mainBody, "LT GF@&bool GF@&tmp1 GF@&tmp2\n" );   
+                }
             }
             break;
 
@@ -975,15 +992,30 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
             // boolian_convert_Type( gen, node, inFunc );
-
-            if ( inFunc ) {
-                add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
-                add_Instruction( &gen->functionBody, "POPS GF@&tmp2\n" );
-                add_Instruction( &gen->functionBody, "GT GF@&bool GF@&tmp1 GF@&tmp2\n" );
+            if ( gen->isWhile ){
+                if ( inFunc ) {
+                    add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
+                    add_Instruction( &gen->functionBody, "POPS GF@&tmp2\n" );
+                    add_Instruction( &gen->functionBody, "GT GF@&bool GF@&tmp1 GF@&tmp2\n" );
+                    add_Instruction( &gen->functionBody, "EQ GF@&boolEQ GF@&tmp1 GF@&tmp2\n");
+                    add_Instruction( &gen->functionBody, "OR GF@&bool GF@&boolEQ GF@&bool\n");
+                } else {
+                    add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
+                    add_Instruction( &gen->mainBody, "POPS GF@&tmp2\n" );
+                    add_Instruction( &gen->mainBody, "GT GF@&bool GF@&tmp1 GF@&tmp2\n" );
+                    add_Instruction( &gen->mainBody, "EQ GF@&boolEQ GF@&tmp1 GF@&tmp2\n");
+                    add_Instruction( &gen->mainBody, "OR GF@&bool GF@&boolEQ GF@&bool\n");
+                }
             } else {
-                add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@&tmp2\n" );
-                add_Instruction( &gen->mainBody, "GT GF@&bool GF@&tmp1 GF@&tmp2\n" );
+                    if ( inFunc ) {
+                    add_Instruction( &gen->functionBody, "POPS GF@&tmp2\n" );
+                    add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
+                    add_Instruction( &gen->functionBody, "GT GF@&bool GF@&tmp1 GF@&tmp2\n" );
+                } else {
+                    add_Instruction( &gen->mainBody, "POPS GF@&tmp2\n" );
+                    add_Instruction( &gen->mainBody, "POPS GF@&tmp1\n" );
+                    add_Instruction( &gen->mainBody, "GT GF@&bool GF@&tmp1 GF@&tmp2\n" );  
+                }
             }
             break;
 
