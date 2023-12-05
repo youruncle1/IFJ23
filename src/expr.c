@@ -167,12 +167,14 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
                         node->left->convertToType = (!right_literal) ? 
                             rightType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
                         node->resultType = node->left->convertToType;
-                    } else if (right_literal)
+                    }
+                    if (right_literal)
                     {
                         node->right->convertToType = (!left_literal) ? 
                             leftType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
                         node->resultType = node->right->convertToType;
-                    } else {
+                    }
+                    if (!left_literal && !right_literal) {
                         node->resultType = (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ?
                                     TK_DOUBLE : TK_INT;
                     }
@@ -194,12 +196,14 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
                         node->left->convertToType = (!right_literal) ? 
                             rightType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
                         node->resultType = TK_BOOLEAN;
-                    } else if (right_literal)
+                    }
+                    if (right_literal)
                     {
                         node->right->convertToType = (!left_literal) ? 
                             leftType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
                         node->resultType = TK_BOOLEAN;
-                    } else {
+                    }
+                    if (!right_literal && !left_literal) {
                         node->resultType = (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ?
                                     TK_DOUBLE : TK_INT;
                     }
@@ -223,12 +227,14 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
                         node->left->convertToType = (!right_literal) ? 
                             rightType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
                         node->resultType = TK_BOOLEAN;
-                    } else if (right_literal)
+                    }
+                    if (right_literal)
                     {
                         node->right->convertToType = (!left_literal) ? 
                             leftType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
                         node->resultType = TK_BOOLEAN;
-                    } else {
+                    }
+                    if (!left_literal && !right_literal) {
                         node->resultType = (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ?
                                     TK_DOUBLE : TK_INT;
                     }

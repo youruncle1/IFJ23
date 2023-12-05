@@ -113,7 +113,7 @@ LABEL _skip_functionName
 */
 
 
-void gen_FunctionHeader( generator_t* gen, char* funcName,Node* function) {
+void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function ) {
     clear_Tape(&gen->functionHead);
     add_Instruction( &gen->functionName, funcName );
 
@@ -766,49 +766,22 @@ void gen_WhileEnd( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
     }
 }
 
-void convert_Type( generator_t* gen, ASTNode* node, ASTNode* childNode, bool inFunc ) {
-
-    if (  node->resultType == TK_DOUBLE ) {
-        if ( inFunc ) {
-            add_Instruction( &gen->functionBody, "CALL Int2Double\n" );
-        } else {
-            add_Instruction( &gen->mainBody, "CALL Int2Double\n" );
-        }
-    } else if ( node->resultType == TK_INT ) {
-        if ( inFunc ) {
-            add_Instruction( &gen->functionBody, "CALL Double2Int\n" );
-        } else {
-            add_Instruction( &gen->mainBody, "CALL Double2Int\n" );
-        }
-    }
-}
-
-void boolian_convert_Type( generator_t* gen, ASTNode* node, bool inFunc ) {
-
-    if ( node->left->token.type == node->right->token.type ) {
-        return;
-    } else if ( node->left->token.type == TK_DOUBLE ) {
-        if ( inFunc ) {
-            add_Instruction( &gen->functionBody, "CALL Int2Double\n" );
-        } else {
-            add_Instruction( &gen->mainBody, "CALL Int2Double\n" );
-        }
-    } else {
-        if ( inFunc ) {
-            add_Instruction( &gen->functionBody, "CALL Double2Int\n" );
-        } else {
-            add_Instruction( &gen->mainBody, "CALL Double2Int\n" );
-        }
-    }
-}
-
 void gen_SaveExprResult( generator_t* gen, char* name ) {
     add_Instruction( &gen->exprResult, name );
 }
 
+void gen_ClearExprResult( generator_t* gen, bool inFunc ) {
+
+    clear_Tape( &gen->exprResult );
+
+    if (inFunc) {
+        add_Instruction( &gen->functionBody, "CLEARS\n" );
+    } else {
+        add_Instruction( &gen->mainBody, "CLEARS\n" );
+    }
+}
 
 //TODO ked je expression viac ako jedna operacia
-//TODO spojenie stringov concat
 void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
 
     if ( node == NULL ) return;
@@ -817,42 +790,73 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
     switch( node->token.type ) {
         case TK_PLUS:
             gen_Expr( gen, node->left, inFunc );
-            // convert_Type( gen, node, node->left, inFunc );
-
             gen_Expr( gen, node->right, inFunc );
-            // convert_Type( gen, node, node->right, inFunc );
 
-            if ( inFunc ) {
-                add_Instruction( &gen->functionBody, "ADDS\n" );
-                add_Instruction( &gen->functionBody, "POPS LF@" );
-                if(gen->isReturn){
-                    add_Instruction( &gen->functionBody, "%retval\n" );
-                }else{
+            //check if concatenation
+            if ( node->resultType == TK_STRING ) {
+                if ( inFunc ) {
+                    add_Instruction( &gen->functionBody, "POPS GF@&tmp2\nPOPS GF@&tmp1\n" );
+                    add_Instruction( &gen->functionBody, "CONCAT LF@" );
+                    add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    add_Instruction( &gen->functionBody, " GF@&tmp1 GF@&tmp2\n" );
+                    // lets push the result back onto the stack if there are any more operations. Just in case
+                    add_Instruction( &gen->functionBody, "PUSHS LF@" );
                     add_Instruction( &gen->functionBody, gen->exprResult.data );
                     add_newLine( &gen->functionBody );
+                } else {
+                    add_Instruction( &gen->mainBody, "POPS GF@&tmp2\nPOPS GF@&tmp1\n" );
+                    add_Instruction( &gen->mainBody, "CONCAT GF@" );
+                    add_Instruction( &gen->mainBody, gen->exprResult.data );
+                    add_Instruction( &gen->mainBody, " GF@&tmp1 GF@&tmp2\n" );
+                    add_Instruction( &gen->mainBody, "PUSHS GF@" );
+                    add_Instruction( &gen->mainBody, gen->exprResult.data );
+                    add_newLine( &gen->mainBody );
                 }
+                //addition
             } else {
-                add_Instruction( &gen->mainBody, "ADDS\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@" );
-                add_Instruction( &gen->mainBody, gen->exprResult.data );
-                add_newLine( &gen->mainBody );
+                if ( inFunc ) {
+                    add_Instruction( &gen->functionBody, "ADDS\n" );
+                    add_Instruction( &gen->functionBody, "POPS LF@" );
+                    if(gen->isReturn){
+                        add_Instruction( &gen->functionBody, "%retval\n" );
+                        //go back into the stack you!
+                        add_Instruction( &gen->functionBody, "PUSHS LF@%retval\n");
+                    }else{
+                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_newLine( &gen->functionBody );
+                        //maybe we will need you again
+                        add_Instruction( &gen->functionBody, "PUSHS LF@" );
+                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_newLine( &gen->functionBody );
+                    }
+                } else {
+                    add_Instruction( &gen->mainBody, "ADDS\n" );
+                    add_Instruction( &gen->mainBody, "POPS GF@" );
+                    add_Instruction( &gen->mainBody, gen->exprResult.data );
+                    add_newLine( &gen->mainBody );
+                    //back on the stack you go!
+                    add_Instruction( &gen->mainBody, "PUSHS GF@" );
+                    add_Instruction( &gen->mainBody, gen->exprResult.data );
+                    add_newLine( &gen->mainBody );
+                }
             }
-            clear_Tape( &gen->exprResult );
+            // clear_Tape( &gen->exprResult );
             break;
 
         case TK_MINUS:
             gen_Expr( gen, node->left, inFunc );
-            // convert_Type( gen, node, node->left, inFunc );
-
             gen_Expr( gen, node->right, inFunc );
-            // convert_Type( gen, node, node->right, inFunc );
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "SUBS\n" );
                 add_Instruction( &gen->functionBody, "POPS LF@" );
                 if(gen->isReturn){
                     add_Instruction( &gen->functionBody, "%retval\n" );
+                    add_Instruction( &gen->functionBody, "PUSHS LF@%retval\n");
                 }else{
+                    add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    add_newLine( &gen->functionBody );
+                    add_Instruction( &gen->functionBody, "PUSHS LF@" );
                     add_Instruction( &gen->functionBody, gen->exprResult.data );
                     add_newLine( &gen->functionBody );
                 }
@@ -861,23 +865,27 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                 add_Instruction( &gen->mainBody, "POPS GF@" );
                 add_Instruction( &gen->mainBody, gen->exprResult.data );
                 add_newLine( &gen->mainBody );
+                add_Instruction( &gen->mainBody, "PUSHS GF@" );
+                add_Instruction( &gen->mainBody, gen->exprResult.data );
+                add_newLine( &gen->mainBody );
             }
-            clear_Tape( &gen->exprResult );
+            // clear_Tape( &gen->exprResult );
             break;
 
         case TK_MUL:
             gen_Expr( gen, node->left, inFunc );
-            // convert_Type( gen, node, node->left, inFunc );
-
             gen_Expr( gen, node->right, inFunc );
-            // convert_Type( gen, node, node->right, inFunc );
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "MULS\n" );
                 add_Instruction( &gen->functionBody, "POPS LF@" );
                 if(gen->isReturn){
                     add_Instruction( &gen->functionBody, "%retval\n" );
+                    add_Instruction( &gen->functionBody, "PUSHS LF@%retval\n");
                 }else{
+                    add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    add_newLine( &gen->functionBody );
+                    add_Instruction( &gen->functionBody, "PUSHS LF@" );
                     add_Instruction( &gen->functionBody, gen->exprResult.data );
                     add_newLine( &gen->functionBody );
                 }
@@ -886,16 +894,16 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                 add_Instruction( &gen->mainBody, "POPS GF@" );
                 add_Instruction( &gen->mainBody, gen->exprResult.data );
                 add_newLine( &gen->mainBody );
+                add_Instruction( &gen->mainBody, "PUSHS GF@" );
+                add_Instruction( &gen->mainBody, gen->exprResult.data );
+                add_newLine( &gen->mainBody );
             }
-            clear_Tape( &gen->exprResult );
+            // clear_Tape( &gen->exprResult );
             break;
 
         case TK_DIV:
             gen_Expr( gen, node->left, inFunc );
-            // convert_Type( gen, node, node->left, inFunc );
-
             gen_Expr( gen, node->right, inFunc );
-            // convert_Type( gen, node, node->right, inFunc );
 
             if ( node->resultType== TK_INT ) {  //  aky je rozfiel medzy node->left.token.type a node->resultType??  (node->left.token.type je type tokenu co obsahuje napr priamo konstantu node->resultType je podla semantiky co bi malo byt vysledkom tej operacii
             //Operandy su double
@@ -904,17 +912,24 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                     add_Instruction( &gen->functionBody, "POPS LF@" );
                     if(gen->isReturn){
                         add_Instruction( &gen->functionBody, "%retval\n" );
+                        add_Instruction( &gen->functionBody, "PUSHS LF@%retval\n");
                     }else{
                         add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_newLine( &gen->functionBody );
+                        add_Instruction( &gen->functionBody, "PUSHS LF@" );
+                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_newLine( &gen->functionBody );
                     }
-                    add_newLine( &gen->functionBody );
                 } else {
                     add_Instruction( &gen->mainBody, "IDIVS\n" );
                     add_Instruction( &gen->mainBody, "POPS GF@" );
                     add_Instruction( &gen->mainBody, gen->exprResult.data );
                     add_newLine( &gen->mainBody );
+                    add_Instruction( &gen->mainBody, "PUSHS GF@" );
+                    add_Instruction( &gen->mainBody, gen->exprResult.data );
+                    add_newLine( &gen->mainBody );
                 }
-                clear_Tape( &gen->exprResult );
+                // clear_Tape( &gen->exprResult );
             } else {
             //Operandy su int
                 if ( inFunc ) {
@@ -922,24 +937,30 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                     add_Instruction( &gen->functionBody, "POPS LF@" );
                     if(gen->isReturn){
                         add_Instruction( &gen->functionBody, "%retval\n" );
+                        add_Instruction( &gen->functionBody, "PUSHS LF@%retval\n");
                     }else{
                         add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_newLine( &gen->functionBody );
+                        add_Instruction( &gen->functionBody, "PUSHS LF@" );
+                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_newLine( &gen->functionBody );
                     }
-                    add_newLine( &gen->functionBody );
                 } else {
                     add_Instruction( &gen->mainBody, "DIVS\n" );
                     add_Instruction( &gen->mainBody, "POPS GF@" );
                     add_Instruction( &gen->mainBody, gen->exprResult.data );
                     add_newLine( &gen->mainBody );
+                    add_Instruction( &gen->mainBody, "PUSHS GF@" );
+                    add_Instruction( &gen->mainBody, gen->exprResult.data );
+                    add_newLine( &gen->mainBody );
                 }
-                clear_Tape( &gen->exprResult );
+                // clear_Tape( &gen->exprResult );
             }
             break;
 
         case TK_EQ:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            // boolian_convert_Type( gen, node, inFunc );
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "EQS\n" );
@@ -953,7 +974,6 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
         case TK_NEQ:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            //boolian_convert_Type( gen, node, inFunc );
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "EQS\n" );
@@ -969,7 +989,6 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
         case TK_LT:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            // boolian_convert_Type( gen, node, inFunc );
 
             if ( gen->isWhile ){
                 if ( inFunc ) {
@@ -1001,7 +1020,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
         case TK_GT:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            // boolian_convert_Type( gen, node, inFunc );
+
             if ( gen->isWhile ){
                 if ( inFunc ) {
                     add_Instruction( &gen->functionBody, "POPS GF@&tmp1\n" );
@@ -1032,7 +1051,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
         case TK_LE:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            //boolian_convert_Type( gen, node, inFunc );
+
 
             if ( inFunc ) {
                 if ( gen->isWhile ) {
@@ -1054,7 +1073,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
         case TK_GE:
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
-            //boolian_convert_Type( gen, node, inFunc );
+
             if ( inFunc ) {
                 if ( gen->isWhile ) {
                     add_Instruction( &gen->functionBody, "CALL _GE\n" );
@@ -1149,11 +1168,11 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
         case TK_MLSTRING:      // multi-line string literal
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "PUSHS string@" );
-                add_Instruction( &gen->functionBody, node->token.data.String );
+                add_Instruction( &gen->functionBody, gen_convertString( node->token.data.String ) );
                 add_newLine( &gen->functionBody );
             } else {
                 add_Instruction( &gen->mainBody, "PUSHS string@" );
-                add_Instruction( &gen->mainBody, node->token.data.String );
+                add_Instruction( &gen->mainBody, gen_convertString( node->token.data.String ) );
                 add_newLine( &gen->mainBody );
             }
             break;
@@ -1178,7 +1197,6 @@ void print_Code(generator_t* gen){
     print_Intructions(&gen->header);
     print_Intructions(&gen->functions);
     //print_Intructions(&gen->functionHead);
-
     //print_Intructions(&gen->functionFoot);
     //print_Intructions(&gen->functionBody);
 

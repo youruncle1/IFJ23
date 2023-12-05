@@ -370,6 +370,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
             //parser_get_next_token(parser, tokenArray);
             gen_SaveExprResult( gen, tmpToken.data.String);
             foundType = rule_expression(parser, tokenArray, gen);
+            gen_ClearExprResult( gen, parser->inFunction );
             foundType = convert_literal_to_datatype(foundType); // me no like
 
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
@@ -1075,6 +1076,7 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
         //parser_get_next_token(parser, tokenArray);
         gen_SaveExprResult( gen, tmpToken.data.String);
         foundType = rule_expression(parser, tokenArray, gen);
+        gen_ClearExprResult( gen, parser->inFunction );
         if(foundType == TK_BOOLEAN){
             handle_error(SEMANTIC_TYPE_COMPATIBILITY,parser->current_token.line,"Cannot assign boolean to variable");
         }
