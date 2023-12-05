@@ -37,6 +37,7 @@ typedef enum {
 
 typedef struct ASTNode {
     tk_type_t resultType;
+    tk_type_t convertToType;
     ItemType type;
     token_t token;
     struct ASTNode *left;

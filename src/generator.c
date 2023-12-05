@@ -8,6 +8,8 @@ authors: xrusna08
 
 */
 
+//TODO (a<=b) vo while
+
 #include <stdlib.h>
 #include <string.h>
 #include "generator.h"
@@ -764,22 +766,22 @@ void gen_WhileEnd( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
     }
 }
 
-// void convert_Type( generator_t* gen, ASTNode* node, ASTNode* childNode, bool inFunc ) {
+void convert_Type( generator_t* gen, ASTNode* node, ASTNode* childNode, bool inFunc ) {
 
-//     if (  node->resultType == TK_DOUBLE ) {
-//         if ( inFunc ) {
-//             add_Instruction( &gen->functionBody, "CALL Int2Double\n" );
-//         } else {
-//             add_Instruction( &gen->mainBody, "CALL Int2Double\n" );
-//         }
-//     } else if ( node->resultType == TK_INT ) {
-//         if ( inFunc ) {
-//             add_Instruction( &gen->functionBody, "CALL Double2Int\n" );
-//         } else {
-//             add_Instruction( &gen->mainBody, "CALL Double2Int\n" );
-//         }
-//     }
-// }
+    if (  node->resultType == TK_DOUBLE ) {
+        if ( inFunc ) {
+            add_Instruction( &gen->functionBody, "CALL Int2Double\n" );
+        } else {
+            add_Instruction( &gen->mainBody, "CALL Int2Double\n" );
+        }
+    } else if ( node->resultType == TK_INT ) {
+        if ( inFunc ) {
+            add_Instruction( &gen->functionBody, "CALL Double2Int\n" );
+        } else {
+            add_Instruction( &gen->mainBody, "CALL Double2Int\n" );
+        }
+    }
+}
 
 void boolian_convert_Type( generator_t* gen, ASTNode* node, bool inFunc ) {
 
@@ -804,6 +806,9 @@ void gen_SaveExprResult( generator_t* gen, char* name ) {
     add_Instruction( &gen->exprResult, name );
 }
 
+
+//TODO ked je expression viac ako jedna operacia
+//TODO spojenie stringov concat
 void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
 
     if ( node == NULL ) return;
@@ -824,6 +829,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                     add_Instruction( &gen->functionBody, "%retval\n" );
                 }else{
                     add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    add_newLine( &gen->functionBody );
                 }
             } else {
                 add_Instruction( &gen->mainBody, "ADDS\n" );
@@ -848,6 +854,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                     add_Instruction( &gen->functionBody, "%retval\n" );
                 }else{
                     add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    add_newLine( &gen->functionBody );
                 }
             } else {
                 add_Instruction( &gen->mainBody, "SUBS\n" );
@@ -872,6 +879,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                     add_Instruction( &gen->functionBody, "%retval\n" );
                 }else{
                     add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    add_newLine( &gen->functionBody );
                 }
             } else {
                 add_Instruction( &gen->mainBody, "MULS\n" );
@@ -889,7 +897,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             gen_Expr( gen, node->right, inFunc );
             // convert_Type( gen, node, node->right, inFunc );
 
-            if ( node->left->token.type == TK_INT && node->left->token.type == TK_INT ) {  //  aky je rozfiel medzy node->left.token.type a node->resultType??  (node->left.token.type je type tokenu co obsahuje napr priamo konstantu node->resultType je podla semantiky co bi malo byt vysledkom tej operacii
+            if ( node->resultType== TK_INT ) {  //  aky je rozfiel medzy node->left.token.type a node->resultType??  (node->left.token.type je type tokenu co obsahuje napr priamo konstantu node->resultType je podla semantiky co bi malo byt vysledkom tej operacii
             //Operandy su double
                 if ( inFunc ) {
                     add_Instruction( &gen->functionBody, "IDIVS\n" );
@@ -899,6 +907,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                     }else{
                         add_Instruction( &gen->functionBody, gen->exprResult.data );
                     }
+                    add_newLine( &gen->functionBody );
                 } else {
                     add_Instruction( &gen->mainBody, "IDIVS\n" );
                     add_Instruction( &gen->mainBody, "POPS GF@" );
@@ -916,6 +925,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                     }else{
                         add_Instruction( &gen->functionBody, gen->exprResult.data );
                     }
+                    add_newLine( &gen->functionBody );
                 } else {
                     add_Instruction( &gen->mainBody, "DIVS\n" );
                     add_Instruction( &gen->mainBody, "POPS GF@" );
@@ -1025,9 +1035,19 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             //boolian_convert_Type( gen, node, inFunc );
 
             if ( inFunc ) {
-                add_Instruction( &gen->functionBody, "CALL _LE\n" );
+                if ( gen->isWhile ) {
+                    add_Instruction( &gen->functionBody, "CALL _LE\n" );
+                    add_Instruction( &gen->functionBody, "NOT GF@&bool GF@&bool\n");    
+                } else {
+                    add_Instruction( &gen->functionBody, "CALL _LE\n" );
+                }
             } else {
-                add_Instruction( &gen->mainBody, "CALL _LE\n" );
+                if ( gen->isWhile ) {
+                    add_Instruction( &gen->mainBody, "CALL _LE\n" );
+                    add_Instruction( &gen->mainBody, "NOT GF@&bool GF@&bool\n");
+                } else {
+                    add_Instruction( &gen->mainBody, "CALL _LE\n" );
+                }
             }
             break;
 
@@ -1035,11 +1055,20 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             gen_Expr( gen, node->left, inFunc );
             gen_Expr( gen, node->right, inFunc );
             //boolian_convert_Type( gen, node, inFunc );
-
             if ( inFunc ) {
-                add_Instruction( &gen->functionBody, "CALL _GE\n" );
+                if ( gen->isWhile ) {
+                    add_Instruction( &gen->functionBody, "CALL _GE\n" );
+                    add_Instruction( &gen->functionBody, "NOT GF@&bool GF@&bool\n");    
+                } else {
+                    add_Instruction( &gen->functionBody, "CALL _GE\n" );
+                }
             } else {
-                add_Instruction( &gen->mainBody, "CALL _GE\n" );
+                if ( gen->isWhile ) {
+                    add_Instruction( &gen->mainBody, "CALL _GE\n" );
+                    add_Instruction( &gen->mainBody, "NOT GF@&bool GF@&bool\n");
+                } else {
+                    add_Instruction( &gen->mainBody, "CALL _GE\n" );
+                }
             }
             break;
 
@@ -1057,15 +1086,31 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
 
         case TK_DOUBLE:        // double literal
 
-            snprintf(buf, sizeof(buf), "%f", node->token.data.Double );
+            snprintf(buf, sizeof(buf), "%a", node->token.data.Double );
             if ( inFunc ) {
-                add_Instruction( &gen->functionBody, "PUSHS float@" );
-                add_Instruction( &gen->functionBody, buf);
-                add_newLine( &gen->functionBody );
+                if ( node->convertToType == TK_INT ) {
+                    add_Instruction( &gen->functionBody, "FLOAT2INT GF@&tmp3 float@");
+                    add_Instruction( &gen->functionBody, buf );
+                    add_newLine( &gen->functionBody );
+                    add_Instruction( &gen->functionBody, "PUSHS GF@&tmp3" );
+                    add_newLine( &gen->mainBody );
+                } else {
+                    add_Instruction( &gen->functionBody, "PUSHS float@" );
+                    add_Instruction( &gen->functionBody, buf );
+                    add_newLine( &gen->functionBody );
+                }
             } else {
-                add_Instruction( &gen->mainBody, "PUSHS float@" );
-                add_Instruction( &gen->mainBody, buf );
-                add_newLine( &gen->mainBody );
+                if ( node->convertToType == TK_INT ) {
+                    add_Instruction( &gen->mainBody, "FLOAT2INT GF@&tmp3 float@");
+                    add_Instruction( &gen->mainBody, buf );
+                    add_newLine( &gen->mainBody );
+                    add_Instruction( &gen->mainBody, "PUSHS GF@&tmp3" );
+                    add_newLine( &gen->mainBody );
+                } else {
+                    add_Instruction( &gen->mainBody, "PUSHS float@" );
+                    add_Instruction( &gen->mainBody, buf );
+                    add_newLine( &gen->mainBody );
+                }
             }
             break;
 
@@ -1073,13 +1118,30 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
 
             snprintf(buf, sizeof(buf), "%lld", node->token.data.Int );
             if ( inFunc ) {
-                add_Instruction( &gen->functionBody, "PUSHS int@" );
-                add_Instruction( &gen->functionBody, buf );
-                add_newLine( &gen->functionBody );
+                if ( node->convertToType == TK_DOUBLE ) {
+                    add_Instruction( &gen->functionBody, "INT2FLOAT GF@&tmp3 int@");
+                    add_Instruction( &gen->functionBody, buf );
+                    add_newLine( &gen->functionBody );
+                    add_Instruction( &gen->functionBody, "PUSHS GF@&tmp3" );
+                    add_newLine( &gen->mainBody );
+                } else {
+                    add_Instruction( &gen->functionBody, "PUSHS int@" );
+                    add_Instruction( &gen->functionBody, buf );
+                    add_newLine( &gen->functionBody );
+                }
             } else {
-                add_Instruction( &gen->mainBody, "PUSHS int@" );
-                add_Instruction( &gen->mainBody, buf );
-                add_newLine( &gen->mainBody );
+                if ( node->convertToType == TK_DOUBLE )
+                {
+                    add_Instruction( &gen->mainBody, "INT2FLOAT GF@&tmp3 int@");
+                    add_Instruction( &gen->mainBody, buf );
+                    add_newLine( &gen->mainBody );
+                    add_Instruction( &gen->mainBody, "PUSHS GF@&tmp3" );
+                    add_newLine( &gen->mainBody );
+                } else {
+                    add_Instruction( &gen->mainBody, "PUSHS int@" );
+                    add_Instruction( &gen->mainBody, buf );
+                    add_newLine( &gen->mainBody );
+                }
             }
             break;
 
