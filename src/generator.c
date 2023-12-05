@@ -31,6 +31,8 @@ generator_t gen_Init(){
     gen.paramCount = 0;
     gen.isReturn = false;
     gen.exprResult = init_Tape();
+    gen.localFrame = NULL;
+    gen.local_frame_size = 0;
     return gen;
 }
 
@@ -60,22 +62,32 @@ void gen_inbuild( generator_t* gen ) {
     gen_GE(gen);
 }
 
-void gen_VarDefinition( generator_t* gen, char* name, bool inFunc ) {
+void gen_VarDefinition( generator_t* gen, char* name, bool inFunc, int scope ) {
     //clear_Tape(&gen->varName);
     add_Instruction( &gen->varName, name );
     //Is token in global or local frame
     if( inFunc ) {
+        addToLocalFrame(name,scope + 1,gen);
         add_Instruction( &gen->functionBody, "DEFVAR LF@" );
         add_Instruction( &gen->functionBody, name );      //add the variable name to definition
         add_newLine( &gen->functionBody );                                             //append new line
     } else {
-        add_Instruction( &gen->mainBody, "DEFVAR GF@" );
-        add_Instruction( &gen->mainBody, name );       //add the variable name to definition
-        add_newLine( &gen->mainBody ); //append new line
+        if(scope != 0){
+            addToLocalFrame(name,scope + 1,gen);
+            add_Instruction(&gen->mainBody, "DEFVAR LF@");
+            add_Instruction(&gen->mainBody, name);       //add the variable name to definition
+            add_Instruction(&gen->mainBody, "$");
+            add_Int(&gen->mainBody, scope + 1);
+            add_newLine(&gen->mainBody); //append new line
+        }else {
+            add_Instruction(&gen->mainBody, "DEFVAR GF@");
+            add_Instruction(&gen->mainBody, name);       //add the variable name to definition
+            add_newLine(&gen->mainBody); //append new line
+        }
     }
 }
 
-void gen_AssignVal( generator_t* gen, char* varName, char* val, bool inFunc, char* type ) {
+void gen_AssignVal( generator_t* gen, char* varName, char* val, bool inFunc, char* type, int scope) {
     if ( inFunc ) {
         add_Instruction( &gen->functionBody, "MOVE LF@" );
         add_Instruction( &gen->functionBody, varName );
@@ -87,15 +99,28 @@ void gen_AssignVal( generator_t* gen, char* varName, char* val, bool inFunc, cha
         add_Instruction( &gen->functionBody, val);
         add_newLine( &gen->functionBody);
     } else {
-        add_Instruction( &gen->mainBody, "MOVE GF@" );
-        add_Instruction( &gen->mainBody, varName );
-        if(strlen(type) != 0) {
-            add_Instruction(&gen->mainBody, type);
+        if(scope != 0){
+            add_Instruction( &gen->mainBody, "MOVE LF@" );
+            add_Instruction( &gen->mainBody, getActualVariable(varName, scope, gen));
+            if(strlen(type) != 0) {
+                add_Instruction(&gen->mainBody, type);
+                add_Instruction( &gen->mainBody, val );
+            }else{
+                add_Instruction(&gen->mainBody, " LF@");
+                add_Instruction( &gen->mainBody, getActualVariable(val, scope, gen));
+            }
+            add_newLine( &gen->mainBody );
         }else{
-            add_Instruction(&gen->mainBody, " GF@");
+            add_Instruction( &gen->mainBody, "MOVE GF@" );
+            add_Instruction( &gen->mainBody, varName );
+            if(strlen(type) != 0) {
+                add_Instruction(&gen->mainBody, type);
+            }else{
+                add_Instruction(&gen->mainBody, " GF@");
+            }
+            add_Instruction( &gen->mainBody, val);
+            add_newLine( &gen->mainBody );
         }
-        add_Instruction( &gen->mainBody, val);
-        add_newLine( &gen->mainBody );
     }
 }
 
@@ -209,7 +234,7 @@ void gen_FunctionCall( generator_t* gen, char* funcName, bool inFunc ) {
     }
 }
 
-void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCount) {
+void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCount, int scope) {
 
     if ( inFunc ) {
         if ( gen->isWrite == 0) {
@@ -227,10 +252,16 @@ void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCou
             add_newLine( &gen->functionBody );
         }
     } else {
-        if ( gen->isWrite == 0 ) {
-            add_Instruction( &gen->mainBody, "WRITE GF@" );
-            add_Instruction( &gen->mainBody, param );
-            add_newLine( &gen->mainBody );    
+        if ( gen->isWrite == 0) {
+            if(scope != 0) {
+                add_Instruction(&gen->mainBody, "WRITE LF@");
+                add_Instruction(&gen->mainBody, getActualVariable(param,scope,gen));
+                add_newLine(&gen->mainBody);
+            }else{
+                add_Instruction(&gen->mainBody, "WRITE GF@");
+                add_Instruction(&gen->mainBody, param);
+                add_newLine(&gen->mainBody);
+            }
         } else {
             add_Instruction( &gen->mainBody, "DEFVAR TF@%" );
             add_Int( &gen->mainBody, paramCount );
@@ -629,8 +660,98 @@ LABEL _else_[selectCount]
 fakse_statenebts
 LABEL _if_done[selectCount]
 */
-void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc) {
+void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope) {
+    if (root != NULL) {
+        // In-order traversal
+        addNonFunctionSymbolsFromGlobal(root->left, gen, scope);
 
+        // Check if the symbol is not a function
+        if (!root->symbol.isFunction) {
+            gen->localFrame = realloc(gen->localFrame, (gen->local_frame_size + 1) * sizeof(char*));
+
+            // Vytvoření nového řetězce s přidaným znakem procenta a hodnotou scope
+            char* var = malloc(strlen(root->symbol.key) + 20);  // Nastavte podle vašich potřeb
+            sprintf(var, "%s$%d", root->symbol.key, scope);
+
+            gen->localFrame[gen->local_frame_size] = var;
+            gen->local_frame_size++;
+
+            add_Instruction(&gen->mainBody,"DEFVAR TF@");
+            add_Instruction(&gen->mainBody,root->symbol.key);
+            add_Instruction(&gen->mainBody,"$");
+            add_Int(&gen->mainBody,scope);
+            add_newLine(&gen->mainBody);
+            add_Instruction(&gen->mainBody,"MOVE TF@");
+            add_Instruction(&gen->mainBody,root->symbol.key);
+            add_Instruction(&gen->mainBody,"$");
+            add_Int(&gen->mainBody,scope);
+            add_Instruction(&gen->mainBody, " GF@");
+            add_Instruction(&gen->mainBody,root->symbol.key);
+            add_newLine(&gen->mainBody);
+        }
+        addNonFunctionSymbolsFromGlobal(root->right, gen, scope);
+    }
+}
+
+char* getActualVariable(char* key,int scope,generator_t* gen){
+    /*for (int i = 0; i < gen->local_frame_size; ++i) {
+        printf("%s\n",gen->localFrame[i]);
+    }*/
+    scope++;
+    char searchKey[256]; // Předpokládáme, že klíč nebude delší než 255 znaků
+
+    // Sestavení hledacího klíče ve tvaru "key$scope"
+
+
+    for (int i = scope; i > 0; --i) {
+        snprintf(searchKey, sizeof(searchKey), "%s$%d", key, scope);
+        for (int j = 0; j < gen->local_frame_size; ++j) {
+            char *currentVariable = gen->localFrame[j];
+            if (strcmp(currentVariable, searchKey) == 0) {
+                return gen->localFrame[j];
+            }
+        }
+        scope--;
+    }
+
+    // Shoda nenalezena
+    return NULL;
+}
+
+void copyVariables(generator_t* gen, bool inFunc){
+    for (int i = 0; i < gen->local_frame_size; ++i) {
+        if(inFunc){
+            add_Instruction(&gen->functionBody,"DEFVAR TF@");
+            add_Instruction(&gen->functionBody,gen->localFrame[i]);
+            add_newLine(&gen->functionBody);
+            add_Instruction(&gen->functionBody,"MOVE TF@");
+            add_Instruction(&gen->functionBody,gen->localFrame[i]);
+            add_Instruction(&gen->functionBody," LF@");
+            add_Instruction(&gen->functionBody,gen->localFrame[i]);
+            add_newLine(&gen->functionBody);
+        }else{
+            add_Instruction(&gen->mainBody,"DEFVAR TF@");
+            add_Instruction(&gen->mainBody,gen->localFrame[i]);
+            add_newLine(&gen->mainBody);
+            add_Instruction(&gen->mainBody,"MOVE TF@");
+            add_Instruction(&gen->mainBody,gen->localFrame[i]);
+            add_Instruction(&gen->mainBody," LF@");
+            add_Instruction(&gen->mainBody,gen->localFrame[i]);
+            add_newLine(&gen->mainBody);
+        }
+    }
+}
+void addToLocalFrame(char* key,int scope, generator_t* gen){
+    gen->localFrame = realloc(gen->localFrame, (gen->local_frame_size + 1) * sizeof(char*));
+
+    // Vytvoření nového řetězce s přidaným znakem procenta a hodnotou scope
+    char* var = malloc(strlen(key) + 20);  // Nastavte podle vašich potřeb
+    sprintf(var, "%s$%d", key, scope);
+    gen->localFrame[gen->local_frame_size] = var;
+    gen->local_frame_size++;
+}
+
+void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* globalFrame) {
     //Increment the count of selections to differenriete between other flow control statements
     if ( scopeDepth <= 1) {gen->selectCount++;}
 
@@ -639,22 +760,37 @@ void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc) {
         add_Int( &gen->functionBody, gen->selectCount );
         add_Int( &gen->functionBody, scopeDepth );
         add_Instruction( &gen->functionBody, " GF@&bool bool@false\n" );
+        add_Instruction( &gen->functionBody, "CREATEFRAME\n" );
+        if(scopeDepth == 1) {
+            addNonFunctionSymbolsFromGlobal(globalFrame, gen, scopeDepth);
+        }
+        add_Instruction( &gen->functionBody, "PUSHFRAME\n" );
     } else {
         add_Instruction( &gen->mainBody, "JUMPIFEQ _else_" );
         add_Int( &gen->mainBody, gen->selectCount );
         add_Int( &gen->mainBody, scopeDepth );
         add_Instruction( &gen->mainBody, " GF@&bool bool@false\n" );
+        add_Instruction( &gen->mainBody, "CREATEFRAME\n" );
+        if(scopeDepth == 1) {
+            addNonFunctionSymbolsFromGlobal(globalFrame, gen, scopeDepth);
+        }
+        if(scopeDepth > 1){
+            copyVariables(gen,inFunc);
+        }
+        add_Instruction( &gen->mainBody, "PUSHFRAME\n" );
     }
 }
 
 void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
+        add_Instruction( &gen->functionBody, "POPFRAME\n" );
         add_Instruction( &gen->functionBody, "JUMP _if_done" );
         add_Int( &gen->functionBody, gen->selectCount );
         add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
     } else {
+        add_Instruction( &gen->functionBody, "POPFRAME\n" );
         add_Instruction( &gen->mainBody, "JUMP _if_done" );
         add_Int( &gen->mainBody, gen->selectCount );
         add_Int( &gen->mainBody, scopeDepth );
@@ -665,11 +801,13 @@ void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 void gen_IfDone_End( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
+        add_Instruction( &gen->functionBody, "POPFRAME\n" );
         add_Instruction( &gen->functionBody, "LABEL _if_done" );
         add_Int( &gen->functionBody, gen->selectCount );
         add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
     } else {
+        add_Instruction( &gen->functionBody, "POPFRAME\n" );
         add_Instruction( &gen->mainBody, "LABEL _if_done" );
         add_Int( &gen->mainBody, gen->selectCount );
         add_Int( &gen->mainBody, scopeDepth );
@@ -684,11 +822,15 @@ void gen_IfThenElse_End( generator_t* gen, unsigned int scopeDepth, bool inFunc 
         add_Int( &gen->functionBody, gen->selectCount );
         add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
+        add_Instruction( &gen->functionBody, "CREATEFRAME\n" );
+        add_Instruction( &gen->functionBody, "PUSHFRAME\n" );
     } else {
         add_Instruction( &gen->mainBody, "LABEL _else_" );
         add_Int( &gen->mainBody, gen->selectCount );
         add_Int( &gen->mainBody, scopeDepth );
         add_newLine( &gen->mainBody );
+        add_Instruction( &gen->functionBody, "CREATEFRAME\n" );
+        add_Instruction( &gen->functionBody, "PUSHFRAME\n" );
     }
 }
 

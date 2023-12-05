@@ -319,7 +319,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
     tk_type_t foundDataType = TK_KW_NIL;                 // ulozeny typ (ak je v definicii typ)
     tk_type_t foundType = TK_KW_NIL;                     // ulozeny najdeny typ vyrazu
 
-    gen_VarDefinition( gen, parser->current_token.data.String, parser->inFunction );
+    gen_VarDefinition( gen, parser->current_token.data.String, parser->inFunction, parser->scopeDepth);
 
     // check ci je uz definovana
     if (search((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, parser->current_token.data.String) != NULL){
@@ -398,18 +398,18 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
             switch (parser->current_token.type){
                 case(TK_INT):
                     sprintf(buffer, "%lld", parser->current_token.data.Int);
-                    gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " int@" );
+                    gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " int@", parser->scopeDepth);
                     break;
                 case(TK_DOUBLE):
                     sprintf(buffer, "%a", parser->current_token.data.Double);
-                    gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " float@" );
+                    gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " float@", parser->scopeDepth);
                     break;
                 case(TK_MLSTRING):
                 case(TK_STRING):
-                    gen_AssignVal( gen, tmpToken.data.String, gen_convertString( parser->current_token.data.String ), parser->inFunction, " string@" );
+                    gen_AssignVal( gen, tmpToken.data.String, gen_convertString( parser->current_token.data.String ), parser->inFunction, " string@", parser->scopeDepth);
                     break;
                 case(TK_IDENTIFIER):
-                    gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, "" );
+                    gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, "", parser->scopeDepth);
                     break;
                 default:
 
@@ -546,7 +546,14 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
             }
         }
 
-        gen_IfThenElse( gen, parser->scopeDepth ,parser->inFunction);
+        if(parser->scopeDepth != 1) {
+            gen_IfThenElse(gen, parser->scopeDepth, parser->inFunction,
+                           parser->global_frame);
+        }else{
+            gen_IfThenElse(gen, parser->scopeDepth, parser->inFunction,
+                           parser->global_frame);
+        }
+        // gen_IfThenElse( gen, parser->scopeDepth ,parser->inFunction);
 
         check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
@@ -924,7 +931,7 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
                 // Store next identifier under symbol.id
                 (*parsedParameters)[parsedParamCount].id = strdup(parser->current_token.data.String);
                 parser_get_next_token(parser,tokenArray);
-                gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1);
+                gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1, parser->scopeDepth);
             } else if (is_token_literal(parser->current_token.type)) {
                 // Convert literal and store under type
                 (*parsedParameters)[parsedParamCount].type = convert_literal_to_datatype(parser->current_token.type);
@@ -954,7 +961,7 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
             // Store identifier under symbol.id
 
             (*parsedParameters)[parsedParamCount].id = strdup(parser->current_token.data.String);
-            gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1);
+            gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1,parser->scopeDepth);
             parser_get_next_token(parser, tokenArray);
         } else {
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected ':', ',' or ')' after identifier");
@@ -1114,18 +1121,18 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
         switch (parser->current_token.type){
             case(TK_INT):
                 sprintf(buffer, "%lld", parser->current_token.data.Int);
-                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " int@" );
+                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " int@", parser->scopeDepth);
                 break;
             case(TK_DOUBLE):
                 sprintf(buffer, "%a", parser->current_token.data.Double);
-                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " float@" );
+                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " float@", parser->scopeDepth);
                 break;
             case(TK_MLSTRING):
             case(TK_STRING):
-                gen_AssignVal( gen, tmpToken.data.String, gen_convertString( parser->current_token.data.String ), parser->inFunction, " string@" );
+                gen_AssignVal( gen, tmpToken.data.String, gen_convertString( parser->current_token.data.String ), parser->inFunction, " string@", parser->scopeDepth);
                 break;
-            case(TK_BOOLEAN):
-                gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, " bool@" );
+            case(TK_IDENTIFIER):
+                    gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, "", parser->scopeDepth);
                 break;
             default:
                 break; 

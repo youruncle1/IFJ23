@@ -35,6 +35,8 @@ typedef struct{
     int paramCount;
     bool isReturn;
     bool isWhile;
+    char** localFrame;
+    int local_frame_size;
 
 }generator_t;
 
@@ -62,7 +64,7 @@ void gen_inbuild(generator_t* gen);
  * @param name of a new variable
  * @param inFunc to know where to generate the definition
 */
-void gen_VarDefinition( generator_t* gen, char* name, bool inFunc );
+void gen_VarDefinition( generator_t* gen, char* name, bool inFunc, int scope);
 
 /**
  * @brief assings value to a variable
@@ -72,7 +74,7 @@ void gen_VarDefinition( generator_t* gen, char* name, bool inFunc );
  * @param inFunc to know where to generate the definition
  * @param type type of the variablr
 */
-void gen_AssignVal( generator_t* gen, char* varName,  char* val, bool inFunc, char* type );
+void gen_AssignVal( generator_t* gen, char* varName,  char* val, bool inFunc, char* type, int scope);
 
 /**
  * @brief generates the start of the function
@@ -92,7 +94,7 @@ void gen_FunctionFooter( generator_t* gen);
 
 void gen_FunctionCall( generator_t* gen, char* funcName, bool inFunc );
 
-void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCount);
+void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCount, int scope);
 
 void gen_CreateFrame( generator_t* gen, bool inFunc );
 
@@ -108,8 +110,16 @@ void gen_FunctionParamNil( generator_t* gen, bool inFunc );
 
 void gen_Function( generator_t* gen );
 
+void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope);
 
-void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc);
+char* getActualVariable(char* key,int scope,generator_t* gen);
+
+void copyVariables(generator_t* gen, bool inFunc);
+
+void addToLocalFrame(char* key,int scope, generator_t* gen);
+
+// void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc);
+void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* globalFrame);
 
 void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
