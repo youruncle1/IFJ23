@@ -5,7 +5,7 @@ file: "symtable.c"
 Symtable (BVS)
 
 authors: xpolia05
-         xbencs00
+         xhonze01
 
 */
 #include "symtable.h"
@@ -214,16 +214,6 @@ Node* stackSearch(SymbolTableStack* stack, const char* key) {
 int isEmpty(SymbolTableStack* stack) {
     return (stack->top == NULL);
 }
-
-// void inOrder(struct Node* node) {
-//     if (node == NULL) {
-//         return;
-//     }
-//     inOrder(node->left);
-//     printf("%s ", node->symbol.key);
-//     inOrder(node->right);
-// }
-
 
 int height(Node *root) {
     if (root == NULL) {
