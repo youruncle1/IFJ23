@@ -214,7 +214,7 @@ void gen_LiteralReturn(generator_t* gen,token_t token){
     }
 }
 
-void gen_AssignReturnToVariable(generator_t* gen,token_t tokenToAssign,bool inFunc){
+void gen_AssignReturnToVariable(generator_t* gen, token_t tokenToAssign, bool inFunc){
     if(inFunc){
         add_Instruction( &gen->functionBody, "MOVE LF@");
         add_Instruction( &gen->functionBody, tokenToAssign.data.String);

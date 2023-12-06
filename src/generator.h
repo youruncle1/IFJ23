@@ -84,30 +84,97 @@ void gen_AssignVal( generator_t* gen, char* varName,  char* val, bool inFunc, ch
 */
 void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function ,Node* globalFrame, int scope);
 
-void gen_LiteralReturn(generator_t* gen,token_t token);
+/**
+ * @brief decides what literal to generate with gen_FunctionParam
+ * @param generator
+ * @param token
+*/
+void gen_LiteralReturn(generator_t* gen, token_t token);
 
-void gen_AssignReturnToVariable(generator_t* gen,token_t tokenToAssign,bool inFunc);
+/**
+ * @brief generates a code to move result into result variable
+ * @param tokenToAssing
+ * @param inFunc
+*/
+void gen_AssignReturnToVariable(generator_t* gen, token_t tokenToAssign, bool inFunc);
 
+/**
+ * @brief generates code when returning variablr
+ * @param token
+ * @param scope
+*/
 void gen_IdentifierReturn(generator_t* gen,token_t token, int scope);
 
+/**
+ * @brief generates the footer of functions
+ * @param generator
+*/
 void gen_FunctionFooter( generator_t* gen);
 
+/**
+ * @brief generates function call
+ * @param generator
+ * @param funcName
+ * @param inFunc
+*/
 void gen_FunctionCall( generator_t* gen, char* funcName, bool inFunc );
 
+/**
+ * @brief generates the parameters of the function, if the function is write, it simply uses IFJcode23 instruction WRITE to print the parameter
+ * @param param parameter to generate
+ * @param inFunc
+ * @param paramCount
+ * @param scope
+*/
 void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCount, int scope);
 
+/**
+ * @brief creates a new frame
+ * @param generator
+ * @param inFunc
+*/
 void gen_CreateFrame( generator_t* gen, bool inFunc );
 
+/**
+ * @brief generates function parameter when is int
+ * @param val value of the parameter
+ * @param inFunc
+ * @param paramCount
+*/
 void gen_FunctionParamInt( generator_t* gen, long val, bool inFunc, int paramCount);
 
+/**
+ * @brief generates function parameter when is double
+ * @param val
+ * @param inFunc
+ * @param paramCount
+*/
 void gen_FunctionParamDouble( generator_t* gen, double val, bool inFunc, int paramCount);
 
+/**
+ * @brief convers a C string into IFJcode23 sting
+ * @param string
+ * @return new converted string
+*/
 char* gen_convertString( char* string );
 
+/**
+ * @brief generates function parameter when is string
+ * @param str
+ * @param inFunc
+ * @param paramCount
+*/
 void gen_FunctionParamString( generator_t* gen, char* str, bool inFunc, int paramCount);
 
+/**
+ * @brief this function is not used
+*/
 void gen_FunctionParamNil( generator_t* gen, bool inFunc );
 
+/**
+ * @brief
+ * @param generator
+*/
 void gen_Function( generator_t* gen );
 
 void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope, bool isFunc);
