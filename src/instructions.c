@@ -28,7 +28,7 @@ void add_Instruction(instructionTape_t* tape, char* instruction) {
     size_t newLen = tape->len + strlen(instruction);
 
     if (newLen >= tape->capacity) {
-        // Zvětšíme kapacitu podle velikosti nové instrukce
+        // Blow up the capacity by the size of a new instruction
         while (newLen >= tape->capacity) {
             tape->capacity += strlen(instruction);
         }

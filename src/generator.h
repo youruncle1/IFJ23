@@ -172,42 +172,121 @@ void gen_FunctionParamString( generator_t* gen, char* str, bool inFunc, int para
 void gen_FunctionParamNil( generator_t* gen, bool inFunc );
 
 /**
- * @brief
+ * @brief joins head. body and foot of a function
  * @param generator
 */
 void gen_Function( generator_t* gen );
 
+/**
+ * @brief inserts all variables from global to global frame of generator
+ * @param root
+ * @param generator
+ * @param scope
+ * @param isFunc
+*/
 void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope, bool isFunc);
 
-char* getActualVariable(char* key,int scope,generator_t* gen);
+/**
+ * @brief gets the name of a variable from symbol table
+ * @param key
+ * @param scope
+ * @param generator 
+ * @return variable name
+*/
+char* getActualVariable(char* key, int scope, generator_t* gen);
 
+/**
+ * @brief copies variables to next frame
+ * @param generator
+ * @param inFunc
+*/
 void copyVariables(generator_t* gen, bool inFunc);
 
-void addToLocalFrame(char* key,int scope, generator_t* gen);
+/**
+ * @brief inserts variables from generator into local frame
+ * @param key
+ * @param scope
+ * @param generator
+*/
+void addToLocalFrame(char* key, int scope, generator_t* gen);
 
-// void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc);
+/**
+ * @brief generates the jump statement of If statement
+ * @param generator
+ * @param scopeDepth
+ * @param inFunc
+ * @param globalFrame
+*/
 void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* globalFrame);
 
+/**
+ * @brief generates jump stament for if done
+ * @param generator
+ * @param scopeDepth
+ * @param inFUnc
+*/
 void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
+/**
+ * @brief ganaretes a labef for if done
+ * @param scopeDepth
+ * @param inFunc
+*/
 void gen_IfDone_End( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
+/**
+ * @brief generates the end of if statement
+ * @param generator
+ * @param scopeDepth
+ * @param inFunc
+ * @param globalFrame
+*/
 void gen_IfThenElse_End( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* globalFrame);
 
+/**
+ * @brief generates the start of while
+ * @param generator
+ * @param scopeDepth
+ * @param inFucn
+ * @param globalFrame
+*/
 void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* globalFrame);
 
+/**
+ * @brief generates the condition for while
+ * @param generator
+ * @param scopeDepth
+ * @param inFunc
+*/
 void gen_WhileCond( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
+/**
+ * @brief generates the end labels for while
+ * @param generator
+ * @param scopeDepth
+ * @param inFunc
+*/
 void gen_WhileEnd( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
-// void gen_WriteParams( generator_t* gen, tk_type_t type, char* name, bool inFunc );
-
+/**
+ * @brief saves the result of an expression, so it can be assined later
+ * @param generator
+ * @param name of the variable
+*/
 void gen_SaveExprResult( generator_t* gen, char* name );
 
+/**
+ * @brief deletes the expression result and clears the stack
+ * @param generator
+ * @param inFunc
+*/
 void gen_ClearExprResult( generator_t* gen, bool inFunc );
 
-//void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc );
-
+/**
+ * @brief functions to generate inbuild functions. All functions are generated before the users code.
+ * The interpreter jumps over them. They can be accesed any time.
+ * @param generator
+*/
 void gen_LE( generator_t* gen );
 
 void gen_COALESCE( generator_t* gen );
@@ -234,6 +313,10 @@ void gen_buildin_ord(generator_t* gen);
 
 void gen_buildin_chr(generator_t* gen);
 
+/**
+ * @brief connects all instruction tapes and prits the code
+ * @param generator
+*/
 void print_Code(generator_t* gen);
 
 #endif //GENERATOR_H

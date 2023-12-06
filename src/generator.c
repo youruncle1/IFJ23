@@ -4,11 +4,11 @@ file: "generator.c"
 
 Code generator
 
-authors: xrusna08 
+authors: xrusna08 xhonze01
 
 */
 
-//TODO (a<=b) vo while
+
 
 #include <stdlib.h>
 #include <string.h>
@@ -141,19 +141,6 @@ void gen_AssignVal( generator_t* gen, char* varName, char* val, bool inFunc, cha
     }
 }
 
-/*
-JUMP _skip_functionName
-LABEL _functionName
-CREATEFRAME
-PUSHFRAME
-
-function body
-
-POPFRAME
-RETURN
-LABEL _skip_functionName
-*/
-
 
 void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function ,Node* globalFrame, int scope) {
     clear_Tape(&gen->functionHead);
@@ -167,7 +154,7 @@ void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function ,Node*
     add_newLine( &gen->functionHead );
     add_Instruction( &gen->functionHead, "PUSHFRAME\n");
     addNonFunctionSymbolsFromGlobal(globalFrame,gen,1,true);
-    //Preklad predavanych parametru na parametry z hlavicky
+    //Translation of function parameters to parameters from function head
     for (int i = 0; i < function->symbol.parametersCount; i++) {
         addToLocalFrame(function->symbol.parameters[i].id ,scope + 1,gen);
         add_Instruction( &gen->functionHead, "DEFVAR LF@" );
@@ -184,7 +171,7 @@ void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function ,Node*
         add_newLine( &gen->functionHead );
     }
 
-    //Pomocna promenna pro return
+    //Helper variable return
     add_Instruction( &gen->functionHead, "DEFVAR LF@%retval\n");
     clear_Tape(&gen->varName);
 
@@ -675,15 +662,7 @@ void gen_Function( generator_t* gen ) {
     add_newLine(&gen->functions);
  }
 
-/*
-!!!eval experession!!!
-JUMPIFEQ _else_[selectCount] GF@&bool bool@false
-true_statements
-JUMP _if_done_[selectCount]
-LABEL _else_[selectCount]
-fakse_statenebts
-LABEL _if_done[selectCount]
-*/
+
 void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope, bool isFunc) {
     if (root != NULL) {
         // In-order traversal
@@ -693,8 +672,8 @@ void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope, bo
         if (!root->symbol.isFunction) {
             gen->localFrame = realloc(gen->localFrame, (gen->local_frame_size + 1) * sizeof(char*));
 
-            // Vytvoření nového řetězce s přidaným znakem procenta a hodnotou scope
-            char* var = malloc(strlen(root->symbol.key) + 20);  // Nastavte podle vašich potřeb
+            // Create a new array with addad symbol % and value of scope
+            char* var = malloc(strlen(root->symbol.key) + 20);  // set as your heath desires
             sprintf(var, "%s$%d", root->symbol.key, scope);
 
             gen->localFrame[gen->local_frame_size] = var;
@@ -732,14 +711,11 @@ void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope, bo
 }
 
 char* getActualVariable(char* key,int scope,generator_t* gen){
-    /*for (int i = 0; i < gen->local_frame_size; ++i) {
-        printf("%s\n",gen->localFrame[i]);
-    }*/
+
     scope++;
-    char searchKey[256]; // Předpokládáme, že klíč nebude delší než 255 znaků
+    char searchKey[256]; // key shouldnt be longer that 255 characters
 
-    // Sestavení hledacího klíče ve tvaru "key$scope"
-
+    // Build a search key in a form of "key$scope"
 
     for (int i = scope; i > 0; --i) {
         snprintf(searchKey, sizeof(searchKey), "%s$%d", key, scope);
@@ -752,7 +728,7 @@ char* getActualVariable(char* key,int scope,generator_t* gen){
         scope--;
     }
 
-    // Shoda nenalezena
+    // did not find a match
     return NULL;
 }
 
@@ -782,8 +758,8 @@ void copyVariables(generator_t* gen, bool inFunc){
 void addToLocalFrame(char* key,int scope, generator_t* gen){
     gen->localFrame = realloc(gen->localFrame, (gen->local_frame_size + 1) * sizeof(char*));
 
-    // Vytvoření nového řetězce s přidaným znakem procenta a hodnotou scope
-    char* var = malloc(strlen(key) + 20);  // Nastavte podle vašich potřeb
+    // Create a new array with addad symbol % and value of scope
+    char* var = malloc(strlen(key) + 20);  // Set as your hearth desires
     sprintf(var, "%s$%d", key, scope);
     gen->localFrame[gen->local_frame_size] = var;
     gen->local_frame_size++;
@@ -822,14 +798,12 @@ void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc, Nod
 void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
-        //freeGenerator(gen);
         add_Instruction( &gen->functionBody, "POPFRAME\n" );
         add_Instruction( &gen->functionBody, "JUMP _if_done" );
         add_Int( &gen->functionBody, gen->selectCount );
         add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
     } else {
-        //freeGenerator(gen);
         add_Instruction( &gen->mainBody, "POPFRAME\n" );
         add_Instruction( &gen->mainBody, "JUMP _if_done" );
         add_Int( &gen->mainBody, gen->selectCount );
@@ -841,7 +815,6 @@ void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 void gen_IfDone_End( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
-        //freeGenerator(gen);
         add_Instruction( &gen->functionBody, "POPFRAME\n" );
         add_Instruction( &gen->functionBody, "LABEL _if_done" );
         add_Int( &gen->functionBody, gen->selectCount );
@@ -882,14 +855,7 @@ void gen_IfThenElse_End( generator_t* gen, unsigned int scopeDepth, bool inFunc,
     }
 }
 
-/*
-LABEL _while_[iterCount]                                //  \
-!!!eval expression!!!                                   //   gen_While
-JUMPIFEQ _while_end_[iterCount] GF@&bool bool@true      //  /
-statements
-JUMP _while_[iterCount]                                 //  \
-LABEL _while_end_[iterCount]                            //   gen_WhileEnd
-*/
+
 void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* globalFrame) {
 
     if ( scopeDepth <= 1 ) {gen->iterCount++;}
@@ -898,8 +864,7 @@ void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* gl
         add_Int( &gen->functionBody, gen->iterCount );
         add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
-
-        //eval expression somehow
+        //eval expression
     } else {
         add_Instruction( &gen->mainBody, "CREATEFRAME\n");
         if(scopeDepth == 1){
@@ -910,9 +875,7 @@ void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* gl
         add_Int( &gen->mainBody, gen->iterCount );
         add_Int( &gen->mainBody, scopeDepth );
         add_newLine( &gen->mainBody );
-
-
-        //eval expression somehow
+        //eval expression
     }
 }
 
@@ -977,7 +940,6 @@ void gen_ClearExprResult( generator_t* gen, bool inFunc ) {
     }
 }
 
-//TODO ked je expression viac ako jedna operacia
 void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
 
     if ( node == NULL ) return;
@@ -985,20 +947,24 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
     char buf[255];
     switch( node->token.type ) {
         case TK_PLUS:
+            //get the left and right nodes of AST
             gen_Expr( gen, node->left, inFunc, scope);
             gen_Expr( gen, node->right, inFunc, scope);
 
             //check if concatenation
             if ( node->resultType == TK_STRING ) {
                 if ( inFunc ) {
+                    //write to function
                     add_Instruction( &gen->functionBody, "POPS GF@&tmp2\nPOPS GF@&tmp1\n" );
                     if(gen->isReturn){
+                        //save to return variable
                         add_Instruction( &gen->functionBody, "CONCAT LF@%retval GF@&tmp1 GF@&tmp2" );
                         add_newLine( &gen->functionBody );
                         //go back into the stack you!
                         add_Instruction( &gen->functionBody, "PUSHS LF@%retval");
                         add_newLine( &gen->functionBody );
                     }else{
+                        //write to expresion result
                         add_Instruction( &gen->functionBody, "CONCAT LF@" );
                         add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                         add_Instruction( &gen->functionBody, " GF@&tmp1 GF@&tmp2\n" );
@@ -1008,6 +974,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
                     }
                 } else {
                     if(scope > 0 || gen->isWhile) {
+                        //write to main body
                         add_Instruction(&gen->mainBody, "POPS GF@&tmp2\nPOPS GF@&tmp1\n");
                         add_Instruction(&gen->mainBody, "CONCAT LF@");
                         add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
@@ -1103,7 +1070,6 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
                     add_newLine(&gen->mainBody);
                 }
             }
-            // clear_Tape( &gen->exprResult );
             break;
 
         case TK_MUL:
@@ -1149,8 +1115,8 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
             gen_Expr( gen, node->left, inFunc, scope);
             gen_Expr( gen, node->right, inFunc, scope);
 
-            if ( node->resultType== TK_INT ) {  //  aky je rozfiel medzy node->left.token.type a node->resultType??  (node->left.token.type je type tokenu co obsahuje napr priamo konstantu node->resultType je podla semantiky co bi malo byt vysledkom tej operacii
-            //Operandy su double
+            if ( node->resultType== TK_INT ) {
+            //Operands are double
                 if ( inFunc ) {
                     add_Instruction( &gen->functionBody, "IDIVS\n" );
                     add_Instruction( &gen->functionBody, "POPS LF@" );
@@ -1183,9 +1149,8 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
                         add_newLine(&gen->mainBody);
                     }
                 }
-                // clear_Tape( &gen->exprResult );
             } else {
-            //Operandy su int
+            //Operands are Int
                 if ( inFunc ) {
                     add_Instruction( &gen->functionBody, "DIVS\n" );
                     add_Instruction( &gen->functionBody, "POPS LF@" );
@@ -1218,7 +1183,6 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
                         add_newLine(&gen->mainBody);
                     }
                 }
-                // clear_Tape( &gen->exprResult );
             }
             break;
 
@@ -1228,10 +1192,10 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "EQS\n" );
-                add_Instruction( &gen->functionBody, "POPS GF@&bool\n");            // pop the result in GF@&bool to use in comparisons
+                add_Instruction( &gen->functionBody, "POPS GF@&bool\n");// pop the result in GF@&bool to use in comparisons
             } else {
                 add_Instruction( &gen->mainBody, "EQS\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@&bool\n" );               // pop the result in GF@&bool to use in comparisons
+                add_Instruction( &gen->mainBody, "POPS GF@&bool\n" );   // pop the result in GF@&bool to use in comparisons
             }
             break;
 
@@ -1354,7 +1318,7 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
                 }
             }
             break;
-
+        // in case of Identifiers and literas, we just push them onto a stack
         case TK_IDENTIFIER:
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "PUSHS LF@" );
@@ -1468,9 +1432,6 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
 void print_Code(generator_t* gen){
     print_Intructions(&gen->header);
     print_Intructions(&gen->functions);
-    //print_Intructions(&gen->functionHead);
-    //print_Intructions(&gen->functionFoot);
-    //print_Intructions(&gen->functionBody);
 
     print_Intructions(&gen->mainBody);
 }
