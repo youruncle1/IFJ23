@@ -230,7 +230,7 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator
     parser_get_next_token(parser, tokenArray);                        // Identifier
 
     Node *node = search(parser->global_frame, parser->current_token.data.String);
-    gen_FunctionHeader( gen, parser->current_token.data.String ,node);
+    gen_FunctionHeader( gen, parser->current_token.data.String ,node,parser->global_frame,parser->scopeDepth);
 
     parser->current_func = search(parser->global_frame, parser->current_token.data.String);
 
@@ -241,14 +241,11 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator
 
     }
     parser_get_next_token(parser, tokenArray);
-
     while(parser->current_token.type != TK_RBRACE) {
         parseBlockContent(parser, tokenArray, gen);
         parser_get_next_token(parser,tokenArray);
     }
-
     // CHECK CI EXISTOVAL RETURN KED SA PRESLO TELO FUNCKIE
-
 
     gen_FunctionFooter(gen);
     parser->inFunction = false;
@@ -319,7 +316,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
     tk_type_t foundDataType = TK_KW_NIL;                 // ulozeny typ (ak je v definicii typ)
     tk_type_t foundType = TK_KW_NIL;                     // ulozeny najdeny typ vyrazu
 
-    gen_VarDefinition( gen, parser->current_token.data.String, parser->inFunction );
+    gen_VarDefinition( gen, parser->current_token.data.String, parser->inFunction, parser->scopeDepth);
 
     // check ci je uz definovana
     if (search((parser->scopeDepth > 0) ? parser->local_frame->top->symbolTable : parser->global_frame, parser->current_token.data.String) != NULL){
@@ -370,6 +367,7 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
             //parser_get_next_token(parser, tokenArray);
             gen_SaveExprResult( gen, tmpToken.data.String);
             foundType = rule_expression(parser, tokenArray, gen);
+            gen_ClearExprResult( gen, parser->inFunction );
             foundType = convert_literal_to_datatype(foundType); // me no like
 
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
@@ -397,18 +395,18 @@ void parseVarDefinition(parser_t *parser, TokenArray *tokenArray, generator_t* g
             switch (parser->current_token.type){
                 case(TK_INT):
                     sprintf(buffer, "%lld", parser->current_token.data.Int);
-                    gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " int@" );
+                    gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " int@", parser->scopeDepth);
                     break;
                 case(TK_DOUBLE):
                     sprintf(buffer, "%a", parser->current_token.data.Double);
-                    gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " float@" );
+                    gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " float@", parser->scopeDepth);
                     break;
                 case(TK_MLSTRING):
                 case(TK_STRING):
-                    gen_AssignVal( gen, tmpToken.data.String, gen_convertString( parser->current_token.data.String ), parser->inFunction, " string@" );
+                    gen_AssignVal( gen, tmpToken.data.String, gen_convertString( parser->current_token.data.String ), parser->inFunction, " string@", parser->scopeDepth);
                     break;
                 case(TK_IDENTIFIER):
-                    gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, "" );
+                    gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, "", parser->scopeDepth);
                     break;
                 default:
 
@@ -545,12 +543,19 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
             }
         }
 
-        gen_IfThenElse( gen, parser->scopeDepth ,parser->inFunction);
+        if(parser->scopeDepth != 1) {
+            gen_IfThenElse(gen, parser->scopeDepth, parser->inFunction,
+                           parser->global_frame);
+        }else{
+            gen_IfThenElse(gen, parser->scopeDepth, parser->inFunction,
+                           parser->global_frame);
+        }
+        // gen_IfThenElse( gen, parser->scopeDepth ,parser->inFunction);
 
         check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
         Node* newScope = NULL;
-        push(parser->local_frame, newScope); // Push new empty scope to local frame
+        push(parser->local_frame, newScope); // Push new empty scope to local frame for if
 
         parser_get_next_token(parser,tokenArray);
         while (parser->current_token.type != TK_RBRACE){
@@ -558,13 +563,16 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
             parser_get_next_token(parser,tokenArray);
         }
 
+        pop(parser->local_frame); // Pop local frame for if
+
+        push(parser->local_frame, newScope); // Push new empty scope to local frame fpr else
         gen_IfDone(gen, parser->scopeDepth, parser->inFunction);
 
         //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
         check_next_token(parser, tokenArray, TK_KW_ELSE);
 
-        gen_IfThenElse_End( gen, parser->scopeDepth, parser->inFunction );
+        gen_IfThenElse_End( gen, parser->scopeDepth, parser->inFunction, parser->global_frame);
 
         check_next_token(parser, tokenArray, TK_LBRACE);
         parser_get_next_token(parser,tokenArray);
@@ -575,6 +583,8 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
 
         //check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
+        pop(parser->local_frame); // Pop local frame for else
+
         gen_IfDone_End( gen, parser->scopeDepth, parser->inFunction );
 
         //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
@@ -584,7 +594,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
 
         gen->isWhile = true;
 
-        gen_While( gen, parser->scopeDepth, parser->inFunction );
+        gen_While( gen, parser->scopeDepth, parser->inFunction, parser->global_frame);
 
         // start start ( 10
         // start part
@@ -601,14 +611,14 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
         check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
         Node* newScope = NULL;
-        push(parser->local_frame, newScope); // Push new empty scope to local frame
+        push(parser->local_frame, newScope); // Push new empty scope to local frame for while
 
         parser_get_next_token(parser,tokenArray);
         while (parser->current_token.type != TK_RBRACE){
             parseBlockContent(parser, tokenArray, gen);
             parser_get_next_token(parser,tokenArray);
         }
-
+        pop(parser->local_frame); //Pop local frame for while
         gen_WhileEnd( gen, parser->scopeDepth, parser->inFunction );
 
         gen->isWhile = false;
@@ -617,7 +627,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
     } else {
         handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected 'if' or 'while'"); // This should not happen
     }
-    pop(parser->local_frame);
+
     parser->scopeDepth--;
 }
 
@@ -654,7 +664,17 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
             // Expressions
             //parser_get_next_token(parser, tokenArray);
             //Poznamka od Duriho: V rule_expression je gen_Expr, ktora vysledok automaticky ulozi na stack, cize sa nemusi pisat prikaz PUSHS "nejaka premenna"
+            //Node *var = searchFramesVar(parser);
+            if(parser->current_token.type == TK_IDENTIFIER) {
+                if (searchFramesVar(parser)->symbol.type == TK_KW_STRING) {
+                    gen_SaveExprResult(gen, lookAheadToken.data.String);
+                }
+            }
+            if(parser->current_token.type == TK_STRING) {
+                gen_SaveExprResult(gen, lookAheadToken.data.String);
+            }
             foundType = rule_expression(parser, tokenArray, gen);
+            gen_ClearExprResult(gen,parser->inFunction);
             foundType = convert_literal_to_datatype(foundType); // me no like
 
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
@@ -667,7 +687,7 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
                 if (!node->symbol.isInit){
                     handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Returning an uninitialized variable");
                 }
-                gen_IdentifierReturn(gen,parser->current_token);
+                gen_IdentifierReturn(gen,parser->current_token,parser->scopeDepth);
 
             } else {
                 // literal
@@ -757,7 +777,9 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
                 if (!node) {
                     handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable");
                 }
+                gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount,parser->scopeDepth + 1);
             }
+
         }
     } else {
 
@@ -786,6 +808,7 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
                     if (!node) {
                         handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable");
                     }
+                    gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount,parser->scopeDepth + 1);
                 }
             }
 
@@ -828,6 +851,8 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
                 if (functionNode->symbol.parameters[i].type != node->symbol.type){
                     handle_error(SEMANTIC_FUNCTION_ARGUMENTS, parser->current_token.line, "Wrong name in function call");
                 }
+                gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount,parser->scopeDepth + 1);
+
             }
             if (parsedParameters[i].type != TK_KW_NIL) {
                 // checknut typ s definiciou funkcie
@@ -923,22 +948,22 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
                 // Store next identifier under symbol.id
                 (*parsedParameters)[parsedParamCount].id = strdup(parser->current_token.data.String);
                 parser_get_next_token(parser,tokenArray);
-                gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1);
+                gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount, parser->scopeDepth + 1);
             } else if (is_token_literal(parser->current_token.type)) {
                 // Convert literal and store under type
                 (*parsedParameters)[parsedParamCount].type = convert_literal_to_datatype(parser->current_token.type);
                 switch( (*parsedParameters)[parsedParamCount].type ) {
                     case TK_KW_INT:
                     case TK_KW_INT_OPT:
-                        gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction, parsedParamCount + 1 );
+                        gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction, parsedParamCount + 1);
                         break;
                     case TK_KW_DOUBLE:
                     case TK_KW_DOUBLE_OPT:
-                        gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction, parsedParamCount + 1 );
+                        gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction, parsedParamCount + 1);
                         break;
                     case TK_KW_STRING:
                     case TK_KW_STRING_OPT:
-                        gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction, parsedParamCount + 1 );
+                        gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction, parsedParamCount + 1);
                         break;
                     case TK_KW_NIL:
                         gen_FunctionParamNil( gen, parser->inFunction );
@@ -953,7 +978,6 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
             // Store identifier under symbol.id
 
             (*parsedParameters)[parsedParamCount].id = strdup(parser->current_token.data.String);
-            gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1);
             parser_get_next_token(parser, tokenArray);
         } else {
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected ':', ',' or ')' after identifier");
@@ -977,18 +1001,16 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
         switch( (*parsedParameters)[parsedParamCount].type ) {
             case TK_KW_INT:
             case TK_KW_INT_OPT:
-                gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction, parsedParamCount + 1 );
+                gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction, parsedParamCount + 1);
                 break;
             case TK_KW_DOUBLE:
             case TK_KW_DOUBLE_OPT:
-                gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction, parsedParamCount + 1 );
+                gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction, parsedParamCount + 1);
                 break;
             case TK_KW_STRING:
             case TK_KW_STRING_OPT:
-                gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction, parsedParamCount + 1 );
+                gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction, parsedParamCount + 1);
                 break;
-            case TK_KW_NIL:
-                gen_FunctionParamNil( gen, parser->inFunction );
             default:
                 break;
 
@@ -1068,6 +1090,7 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
         if (foundType == TK_KW_NIL){
             handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Cannot assign a void function");
         }
+        gen_AssignReturnToVariable(gen,tmpToken,parser->inFunction);
 
     } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))
                || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {
@@ -1075,6 +1098,7 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
         //parser_get_next_token(parser, tokenArray);
         gen_SaveExprResult( gen, tmpToken.data.String);
         foundType = rule_expression(parser, tokenArray, gen);
+        gen_ClearExprResult( gen, parser->inFunction );
         if(foundType == TK_BOOLEAN){
             handle_error(SEMANTIC_TYPE_COMPATIBILITY,parser->current_token.line,"Cannot assign boolean to variable");
         }
@@ -1112,18 +1136,18 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
         switch (parser->current_token.type){
             case(TK_INT):
                 sprintf(buffer, "%lld", parser->current_token.data.Int);
-                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " int@" );
+                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " int@", parser->scopeDepth);
                 break;
             case(TK_DOUBLE):
                 sprintf(buffer, "%a", parser->current_token.data.Double);
-                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " float@" );
+                gen_AssignVal( gen, tmpToken.data.String,buffer, parser->inFunction, " float@", parser->scopeDepth);
                 break;
             case(TK_MLSTRING):
             case(TK_STRING):
-                gen_AssignVal( gen, tmpToken.data.String, gen_convertString( parser->current_token.data.String ), parser->inFunction, " string@" );
+                gen_AssignVal( gen, tmpToken.data.String, gen_convertString( parser->current_token.data.String ), parser->inFunction, " string@", parser->scopeDepth);
                 break;
-            case(TK_BOOLEAN):
-                gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, " bool@" );
+            case(TK_IDENTIFIER):
+                    gen_AssignVal( gen, tmpToken.data.String,parser->current_token.data.String, parser->inFunction, "", parser->scopeDepth);
                 break;
             default:
                 break; 

@@ -1,15 +1,9 @@
-var i : Int = 0
-
-while (i < 5)
+func foo(_ x:String,_ y:String)->String
 {
-    write("hello\n")
-    i = i + 1
+    write(x)
+    return x+y
 }
 
-var a : Int = 10
+var a = foo("ahoj"," neger")
+write(a)
 
-while (a > 5)
-{
-    write("foo\n")
-    a = a - 2
-}

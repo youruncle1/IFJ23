@@ -122,6 +122,8 @@ bool stack_isempty(Stack *stack) {
 int performSemanticCheck(ASTNode* node,parser_t *parser) {
     tk_type_t leftType;
     tk_type_t rightType;
+    bool left_literal = true;
+    bool right_literal = true;
     if (node->left->token.type >= TK_UNWRAP && node->left->token.type <= TK_COALESCE)
         leftType = node->left->resultType;
     else
@@ -134,12 +136,15 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
     if (node->left->token.type == TK_IDENTIFIER)
     {
         leftType = expr_convert_literal_to_datatype(typeOf_ID(parser, node->left->token.data.String));
+        left_literal = false;
     }
     if (node->right->token.type == TK_IDENTIFIER)
     {
         rightType = expr_convert_literal_to_datatype(typeOf_ID(parser, node->right->token.data.String));
+        right_literal = false;
     }
-
+    if (!left_literal && !right_literal && (leftType != rightType))
+        handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "Expression");
 
     switch (node->token.type) {
         case TK_PLUS:
@@ -153,20 +158,27 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
             }
         case TK_MINUS:
+        case TK_DIV:
         case TK_MUL:
             if ((leftType == TK_DOUBLE || leftType == TK_INT) &&
                 (rightType == TK_DOUBLE || rightType == TK_INT)) {
-                node->resultType = (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ?
-                                   TK_DOUBLE : TK_INT;
-                return 0;
-            } else {
-                handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
-            }
-            break;
-        case TK_DIV:
-            if ((leftType == TK_DOUBLE || leftType == TK_INT) &&
-                (rightType == TK_DOUBLE || rightType == TK_INT)) {
-                node->resultType = TK_DOUBLE;
+                    if (left_literal)
+                    {
+                        node->left->convertToType = (!right_literal) ? 
+                            rightType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
+                        node->resultType = node->left->convertToType;
+                    }
+                    if (right_literal)
+                    {
+                        node->right->convertToType = (!left_literal) ? 
+                            leftType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
+                        node->resultType = node->right->convertToType;
+                    }
+                    if (!left_literal && !right_literal) {
+                        node->resultType = (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ?
+                                    TK_DOUBLE : TK_INT;
+                    }
+                    
                 return 0;
             } else {
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
@@ -177,6 +189,26 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
             if (leftType == rightType) {
                 node->resultType = TK_BOOLEAN;
                 return 0;
+            } else if ((leftType == TK_DOUBLE || leftType == TK_INT) &&
+                (rightType == TK_DOUBLE || rightType == TK_INT)) {
+                    if (left_literal)
+                    {
+                        node->left->convertToType = (!right_literal) ? 
+                            rightType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
+                        node->resultType = TK_BOOLEAN;
+                    }
+                    if (right_literal)
+                    {
+                        node->right->convertToType = (!left_literal) ? 
+                            leftType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
+                        node->resultType = TK_BOOLEAN;
+                    }
+                    if (!right_literal && !left_literal) {
+                        node->resultType = (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ?
+                                    TK_DOUBLE : TK_INT;
+                    }
+                    
+                return 0;
             } else {
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
             }
@@ -185,11 +217,29 @@ int performSemanticCheck(ASTNode* node,parser_t *parser) {
         case TK_GT:
         case TK_LE:
         case TK_GE:
-            if ((leftType == rightType) && 
-                (leftType >= TK_DOUBLE && leftType <= TK_MLSTRING)
-                ) {
+            if (leftType == rightType) {
                 node->resultType = TK_BOOLEAN;
                return 0;
+            } else if ((leftType == TK_DOUBLE || leftType == TK_INT) &&
+                (rightType == TK_DOUBLE || rightType == TK_INT)) {
+                    if (left_literal)
+                    {
+                        node->left->convertToType = (!right_literal) ? 
+                            rightType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
+                        node->resultType = TK_BOOLEAN;
+                    }
+                    if (right_literal)
+                    {
+                        node->right->convertToType = (!left_literal) ? 
+                            leftType : (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ? TK_DOUBLE : TK_INT;
+                        node->resultType = TK_BOOLEAN;
+                    }
+                    if (!left_literal && !right_literal) {
+                        node->resultType = (leftType == TK_DOUBLE || rightType == TK_DOUBLE) ?
+                                    TK_DOUBLE : TK_INT;
+                    }
+                    
+                return 0;
             } else {
                 handle_error(SEMANTIC_TYPE_COMPATIBILITY,node->token.line, "");
             }
@@ -219,6 +269,7 @@ ASTNode *create_node(token_t token, ASTNodeType type) {
     node->type = type;
     node->resultType = type;
     node->token = token;
+    node->convertToType = TK_KW_NIL;
     return node;
 }
 ASTNode *parse_non_terminal(token_t token){
@@ -392,7 +443,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray, generator_t*
             result = stack->top->data.node->resultType;
             //parser_get_previous_token(parser, tokenArray);
             parser_get_previous_token(parser, tokenArray);
-            gen_Expr(gen, stack->top->data.node, parser->inFunction);
+            gen_Expr(gen, stack->top->data.node, parser->inFunction,parser->scopeDepth);
             return result;
             }
 
