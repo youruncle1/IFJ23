@@ -27,6 +27,13 @@ typedef enum {
     INTERNAL_COMPILER_ERROR = 99
 } ErrorCode;
 
+/**
+ * @brief exits the pr
+ * 
+ * @param error_code 
+ * @param line 
+ * @param message 
+ */
 void handle_error(ErrorCode error_code, unsigned line, const char *message);
 
 #endif // ERROR_H
