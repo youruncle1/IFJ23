@@ -230,7 +230,7 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator
     parser_get_next_token(parser, tokenArray);                        // Identifier
 
     Node *node = search(parser->global_frame, parser->current_token.data.String);
-    gen_FunctionHeader( gen, parser->current_token.data.String ,node);
+    gen_FunctionHeader( gen, parser->current_token.data.String ,node,parser->global_frame,parser->scopeDepth);
 
     parser->current_func = search(parser->global_frame, parser->current_token.data.String);
 
@@ -241,16 +241,21 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator
 
     }
     parser_get_next_token(parser, tokenArray);
-
+    bool footerGenerated = false;
     while(parser->current_token.type != TK_RBRACE) {
+        if(footerGenerated){
+            gen_FunctionFooter(gen);
+        }
+        if(parser->current_token.type == TK_KW_RETURN ){
+            footerGenerated = true;
+        }
         parseBlockContent(parser, tokenArray, gen);
         parser_get_next_token(parser,tokenArray);
     }
-
     // CHECK CI EXISTOVAL RETURN KED SA PRESLO TELO FUNCKIE
-
-
-    gen_FunctionFooter(gen);
+    if(!footerGenerated) {
+        gen_FunctionFooter(gen);
+    }
     parser->inFunction = false;
     parser->hasReturn = false;
     parser->scopeDepth--;                                             // scopeDepth should be 0 after this!!!
@@ -558,7 +563,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
         check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
         Node* newScope = NULL;
-        push(parser->local_frame, newScope); // Push new empty scope to local frame
+        push(parser->local_frame, newScope); // Push new empty scope to local frame for if
 
         parser_get_next_token(parser,tokenArray);
         while (parser->current_token.type != TK_RBRACE){
@@ -566,13 +571,16 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
             parser_get_next_token(parser,tokenArray);
         }
 
+        pop(parser->local_frame); // Pop local frame for if
+
+        push(parser->local_frame, newScope); // Push new empty scope to local frame fpr else
         gen_IfDone(gen, parser->scopeDepth, parser->inFunction);
 
         //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
 
         check_next_token(parser, tokenArray, TK_KW_ELSE);
 
-        gen_IfThenElse_End( gen, parser->scopeDepth, parser->inFunction );
+        gen_IfThenElse_End( gen, parser->scopeDepth, parser->inFunction, parser->global_frame);
 
         check_next_token(parser, tokenArray, TK_LBRACE);
         parser_get_next_token(parser,tokenArray);
@@ -583,6 +591,8 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
 
         //check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
+        pop(parser->local_frame); // Pop local frame for else
+
         gen_IfDone_End( gen, parser->scopeDepth, parser->inFunction );
 
         //check_next_token(parser, tokenArray, TK_RBRACE); // Check for '}'
@@ -592,7 +602,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
 
         gen->isWhile = true;
 
-        gen_While( gen, parser->scopeDepth, parser->inFunction );
+        gen_While( gen, parser->scopeDepth, parser->inFunction, parser->global_frame);
 
         // start start ( 10
         // start part
@@ -609,14 +619,14 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
         check_next_token(parser, tokenArray, TK_LBRACE); // Check for '{'
 
         Node* newScope = NULL;
-        push(parser->local_frame, newScope); // Push new empty scope to local frame
+        push(parser->local_frame, newScope); // Push new empty scope to local frame for while
 
         parser_get_next_token(parser,tokenArray);
         while (parser->current_token.type != TK_RBRACE){
             parseBlockContent(parser, tokenArray, gen);
             parser_get_next_token(parser,tokenArray);
         }
-
+        pop(parser->local_frame); //Pop local frame for while
         gen_WhileEnd( gen, parser->scopeDepth, parser->inFunction );
 
         gen->isWhile = false;
@@ -625,7 +635,7 @@ void parseControlStructure(parser_t *parser, TokenArray *tokenArray, generator_t
     } else {
         handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected 'if' or 'while'"); // This should not happen
     }
-    pop(parser->local_frame);
+
     parser->scopeDepth--;
 }
 
@@ -662,7 +672,17 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
             // Expressions
             //parser_get_next_token(parser, tokenArray);
             //Poznamka od Duriho: V rule_expression je gen_Expr, ktora vysledok automaticky ulozi na stack, cize sa nemusi pisat prikaz PUSHS "nejaka premenna"
+            //Node *var = searchFramesVar(parser);
+            if(parser->current_token.type == TK_IDENTIFIER) {
+                if (searchFramesVar(parser)->symbol.type == TK_KW_STRING) {
+                    gen_SaveExprResult(gen, lookAheadToken.data.String);
+                }
+            }
+            if(parser->current_token.type == TK_STRING) {
+                gen_SaveExprResult(gen, lookAheadToken.data.String);
+            }
             foundType = rule_expression(parser, tokenArray, gen);
+            gen_ClearExprResult(gen,parser->inFunction);
             foundType = convert_literal_to_datatype(foundType); // me no like
 
         } else if (isStartOfExpression(parser->current_token.type) && !isPartOfExpression(nextToken.type)) {
@@ -675,7 +695,7 @@ void parseReturn(parser_t *parser, TokenArray *tokenArray, generator_t* gen) {
                 if (!node->symbol.isInit){
                     handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Returning an uninitialized variable");
                 }
-                gen_IdentifierReturn(gen,parser->current_token);
+                gen_IdentifierReturn(gen,parser->current_token,parser->scopeDepth);
 
             } else {
                 // literal
@@ -765,7 +785,9 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
                 if (!node) {
                     handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable");
                 }
+                gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount + 1,parser->scopeDepth);
             }
+
         }
     } else {
 
@@ -794,6 +816,7 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
                     if (!node) {
                         handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable");
                     }
+                    gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount + 1,parser->scopeDepth);
                 }
             }
 
@@ -836,6 +859,8 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
                 if (functionNode->symbol.parameters[i].type != node->symbol.type){
                     handle_error(SEMANTIC_FUNCTION_ARGUMENTS, parser->current_token.line, "Wrong name in function call");
                 }
+                gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount + 1,parser->scopeDepth);
+
             }
             if (parsedParameters[i].type != TK_KW_NIL) {
                 // checknut typ s definiciou funkcie
@@ -961,7 +986,7 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
             // Store identifier under symbol.id
 
             (*parsedParameters)[parsedParamCount].id = strdup(parser->current_token.data.String);
-            gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1,parser->scopeDepth);
+            //gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1,parser->scopeDepth);
             parser_get_next_token(parser, tokenArray);
         } else {
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected ':', ',' or ')' after identifier");
@@ -1076,6 +1101,7 @@ void parseAssignment(parser_t *parser, TokenArray *tokenArray, generator_t* gen)
         if (foundType == TK_KW_NIL){
             handle_error(SEMANTIC_TYPE_COMPATIBILITY, parser->current_token.line, "Cannot assign a void function");
         }
+        gen_AssignReturnToVariable(gen,tmpToken,parser->inFunction);
 
     } else if ((isStartOfExpression(parser->current_token.type) && isPartOfExpression(nextToken.type))
                || (parser->current_token.type == TK_LPAR && isStartOfExpression(nextToken.type))) {

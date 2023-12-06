@@ -15,6 +15,20 @@ authors: xrusna08
 #include "generator.h"
 #include "expr.h"
 
+void freeGenerator(generator_t *gen) {
+    // Free the elements of localFrame
+    for (int i = 0; i < gen->local_frame_size; ++i) {
+        free(gen->localFrame[i]);
+    }
+
+    // Free the array itself
+    free(gen->localFrame);
+
+    gen->localFrame = NULL;
+    // Reset local_frame_size to zero
+    gen->local_frame_size = 0;
+}
+
 generator_t gen_Init(){
     generator_t gen;
     gen.functions = init_Tape();
@@ -33,6 +47,7 @@ generator_t gen_Init(){
     gen.exprResult = init_Tape();
     gen.localFrame = NULL;
     gen.local_frame_size = 0;
+    gen.isWhile = false;
     return gen;
 }
 
@@ -63,26 +78,27 @@ void gen_inbuild( generator_t* gen ) {
 }
 
 void gen_VarDefinition( generator_t* gen, char* name, bool inFunc, int scope ) {
-    //clear_Tape(&gen->varName);
     add_Instruction( &gen->varName, name );
     //Is token in global or local frame
     if( inFunc ) {
         addToLocalFrame(name,scope + 1,gen);
-        add_Instruction( &gen->functionBody, "DEFVAR LF@" );
-        add_Instruction( &gen->functionBody, name );      //add the variable name to definition
-        add_newLine( &gen->functionBody );                                             //append new line
+        add_Instruction(&gen->functionBody, "DEFVAR LF@");
+        add_Instruction(&gen->functionBody, name);            //add the variable name to definition
+        add_Instruction(&gen->functionBody, "$");
+        add_Int(&gen->functionBody, scope + 1);
+        add_newLine( &gen->functionBody );                             //append new line
     } else {
         if(scope != 0){
             addToLocalFrame(name,scope + 1,gen);
             add_Instruction(&gen->mainBody, "DEFVAR LF@");
-            add_Instruction(&gen->mainBody, name);       //add the variable name to definition
+            add_Instruction(&gen->mainBody, name);             //add the variable name to definition
             add_Instruction(&gen->mainBody, "$");
             add_Int(&gen->mainBody, scope + 1);
             add_newLine(&gen->mainBody); //append new line
         }else {
             add_Instruction(&gen->mainBody, "DEFVAR GF@");
-            add_Instruction(&gen->mainBody, name);       //add the variable name to definition
-            add_newLine(&gen->mainBody); //append new line
+            add_Instruction(&gen->mainBody, name);             //add the variable name to definition
+            add_newLine(&gen->mainBody);                                //append new line
         }
     }
 }
@@ -90,13 +106,14 @@ void gen_VarDefinition( generator_t* gen, char* name, bool inFunc, int scope ) {
 void gen_AssignVal( generator_t* gen, char* varName, char* val, bool inFunc, char* type, int scope) {
     if ( inFunc ) {
         add_Instruction( &gen->functionBody, "MOVE LF@" );
-        add_Instruction( &gen->functionBody, varName );
+        add_Instruction( &gen->functionBody, getActualVariable(varName, scope, gen) );
         if(strlen(type) != 0) {
             add_Instruction(&gen->functionBody, type);
+            add_Instruction( &gen->functionBody, val );
         }else{
             add_Instruction(&gen->functionBody, " LF@");
+            add_Instruction( &gen->functionBody, getActualVariable(val, scope, gen));
         }
-        add_Instruction( &gen->functionBody, val);
         add_newLine( &gen->functionBody);
     } else {
         if(scope != 0){
@@ -138,7 +155,7 @@ LABEL _skip_functionName
 */
 
 
-void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function ) {
+void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function ,Node* globalFrame, int scope) {
     clear_Tape(&gen->functionHead);
     add_Instruction( &gen->functionName, funcName );
 
@@ -149,14 +166,19 @@ void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function ) {
     add_Instruction( &gen->functionHead, funcName );  //name of function
     add_newLine( &gen->functionHead );
     add_Instruction( &gen->functionHead, "PUSHFRAME\n");
-
+    addNonFunctionSymbolsFromGlobal(globalFrame,gen,1,true);
     //Preklad predavanych parametru na parametry z hlavicky
     for (int i = 0; i < function->symbol.parametersCount; i++) {
+        addToLocalFrame(function->symbol.parameters[i].id ,scope + 1,gen);
         add_Instruction( &gen->functionHead, "DEFVAR LF@" );
         add_Instruction( &gen->functionHead, function->symbol.parameters[i].id );
+        add_Instruction( &gen->functionHead, "$");
+        add_Int(&gen->functionHead,scope + 1);
         add_newLine( &gen->functionHead );
         add_Instruction( &gen->functionHead, "MOVE LF@" );
         add_Instruction( &gen->functionHead, function->symbol.parameters[i].id );
+        add_Instruction( &gen->functionHead, "$");
+        add_Int(&gen->functionHead,scope + 1);
         add_Instruction( &gen->functionHead, " LF@%" );
         add_Int(&gen->functionHead,i+1);
         add_newLine( &gen->functionHead );
@@ -168,9 +190,9 @@ void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function ) {
 
 }
 
-void gen_IdentifierReturn(generator_t* gen,token_t token){
+void gen_IdentifierReturn(generator_t* gen,token_t token, int scope){
     add_Instruction( &gen->functionFoot, "MOVE LF@%retval LF@");
-    add_Instruction(&gen->functionFoot,token.data.String);
+    add_Instruction(&gen->functionFoot, getActualVariable(token.data.String,scope,gen));
     add_newLine(&gen->functionFoot);
 }
 
@@ -239,7 +261,8 @@ void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCou
     if ( inFunc ) {
         if ( gen->isWrite == 0) {
             add_Instruction( &gen->functionBody, "WRITE LF@" );
-            add_Instruction( &gen->functionBody, param );
+            char *found = getActualVariable(param,scope,gen);
+            add_Instruction( &gen->functionBody, getActualVariable(param,scope,gen) );
             add_newLine( &gen->functionBody );    
         } else {
             add_Instruction( &gen->functionBody, "DEFVAR TF@%" );
@@ -255,6 +278,7 @@ void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCou
         if ( gen->isWrite == 0) {
             if(scope != 0) {
                 add_Instruction(&gen->mainBody, "WRITE LF@");
+                char *found = getActualVariable(param,scope,gen);
                 add_Instruction(&gen->mainBody, getActualVariable(param,scope,gen));
                 add_newLine(&gen->mainBody);
             }else{
@@ -660,10 +684,10 @@ LABEL _else_[selectCount]
 fakse_statenebts
 LABEL _if_done[selectCount]
 */
-void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope) {
+void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope, bool isFunc) {
     if (root != NULL) {
         // In-order traversal
-        addNonFunctionSymbolsFromGlobal(root->left, gen, scope);
+        addNonFunctionSymbolsFromGlobal(root->left, gen, scope, isFunc);
 
         // Check if the symbol is not a function
         if (!root->symbol.isFunction) {
@@ -675,21 +699,35 @@ void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope) {
 
             gen->localFrame[gen->local_frame_size] = var;
             gen->local_frame_size++;
-
-            add_Instruction(&gen->mainBody,"DEFVAR TF@");
-            add_Instruction(&gen->mainBody,root->symbol.key);
-            add_Instruction(&gen->mainBody,"$");
-            add_Int(&gen->mainBody,scope);
-            add_newLine(&gen->mainBody);
-            add_Instruction(&gen->mainBody,"MOVE TF@");
-            add_Instruction(&gen->mainBody,root->symbol.key);
-            add_Instruction(&gen->mainBody,"$");
-            add_Int(&gen->mainBody,scope);
-            add_Instruction(&gen->mainBody, " GF@");
-            add_Instruction(&gen->mainBody,root->symbol.key);
-            add_newLine(&gen->mainBody);
+            if(isFunc){
+                add_Instruction(&gen->functionBody, "DEFVAR LF@");
+                add_Instruction(&gen->functionBody, root->symbol.key);
+                add_Instruction(&gen->functionBody, "$");
+                add_Int(&gen->functionBody, scope);
+                add_newLine(&gen->functionBody);
+                add_Instruction(&gen->functionBody, "MOVE LF@");
+                add_Instruction(&gen->functionBody, root->symbol.key);
+                add_Instruction(&gen->functionBody, "$");
+                add_Int(&gen->functionBody, scope);
+                add_Instruction(&gen->functionBody, " GF@");
+                add_Instruction(&gen->functionBody, root->symbol.key);
+                add_newLine(&gen->functionBody);
+            }else {
+                add_Instruction(&gen->mainBody, "DEFVAR TF@");
+                add_Instruction(&gen->mainBody, root->symbol.key);
+                add_Instruction(&gen->mainBody, "$");
+                add_Int(&gen->mainBody, scope);
+                add_newLine(&gen->mainBody);
+                add_Instruction(&gen->mainBody, "MOVE TF@");
+                add_Instruction(&gen->mainBody, root->symbol.key);
+                add_Instruction(&gen->mainBody, "$");
+                add_Int(&gen->mainBody, scope);
+                add_Instruction(&gen->mainBody, " GF@");
+                add_Instruction(&gen->mainBody, root->symbol.key);
+                add_newLine(&gen->mainBody);
+            }
         }
-        addNonFunctionSymbolsFromGlobal(root->right, gen, scope);
+        addNonFunctionSymbolsFromGlobal(root->right, gen, scope, isFunc);
     }
 }
 
@@ -761,8 +799,8 @@ void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc, Nod
         add_Int( &gen->functionBody, scopeDepth );
         add_Instruction( &gen->functionBody, " GF@&bool bool@false\n" );
         add_Instruction( &gen->functionBody, "CREATEFRAME\n" );
-        if(scopeDepth == 1) {
-            addNonFunctionSymbolsFromGlobal(globalFrame, gen, scopeDepth);
+        if(scopeDepth > 1){
+            copyVariables(gen,inFunc);
         }
         add_Instruction( &gen->functionBody, "PUSHFRAME\n" );
     } else {
@@ -772,7 +810,7 @@ void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc, Nod
         add_Instruction( &gen->mainBody, " GF@&bool bool@false\n" );
         add_Instruction( &gen->mainBody, "CREATEFRAME\n" );
         if(scopeDepth == 1) {
-            addNonFunctionSymbolsFromGlobal(globalFrame, gen, scopeDepth);
+            addNonFunctionSymbolsFromGlobal(globalFrame, gen, scopeDepth,inFunc);
         }
         if(scopeDepth > 1){
             copyVariables(gen,inFunc);
@@ -784,13 +822,15 @@ void gen_IfThenElse( generator_t* gen, unsigned int scopeDepth, bool inFunc, Nod
 void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
+        //freeGenerator(gen);
         add_Instruction( &gen->functionBody, "POPFRAME\n" );
         add_Instruction( &gen->functionBody, "JUMP _if_done" );
         add_Int( &gen->functionBody, gen->selectCount );
         add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
     } else {
-        add_Instruction( &gen->functionBody, "POPFRAME\n" );
+        //freeGenerator(gen);
+        add_Instruction( &gen->mainBody, "POPFRAME\n" );
         add_Instruction( &gen->mainBody, "JUMP _if_done" );
         add_Int( &gen->mainBody, gen->selectCount );
         add_Int( &gen->mainBody, scopeDepth );
@@ -801,13 +841,15 @@ void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 void gen_IfDone_End( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
     if ( inFunc ) {
+        //freeGenerator(gen);
         add_Instruction( &gen->functionBody, "POPFRAME\n" );
         add_Instruction( &gen->functionBody, "LABEL _if_done" );
         add_Int( &gen->functionBody, gen->selectCount );
         add_Int( &gen->functionBody, scopeDepth );
         add_newLine( &gen->functionBody );
     } else {
-        add_Instruction( &gen->functionBody, "POPFRAME\n" );
+        freeGenerator(gen);
+        add_Instruction( &gen->mainBody, "POPFRAME\n" );
         add_Instruction( &gen->mainBody, "LABEL _if_done" );
         add_Int( &gen->mainBody, gen->selectCount );
         add_Int( &gen->mainBody, scopeDepth );
@@ -815,7 +857,7 @@ void gen_IfDone_End( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
     }
 }
 
-void gen_IfThenElse_End( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
+void gen_IfThenElse_End( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* globalFrame ) {
 
     if ( inFunc ) {
         add_Instruction( &gen->functionBody, "LABEL _else_" );
@@ -829,8 +871,14 @@ void gen_IfThenElse_End( generator_t* gen, unsigned int scopeDepth, bool inFunc 
         add_Int( &gen->mainBody, gen->selectCount );
         add_Int( &gen->mainBody, scopeDepth );
         add_newLine( &gen->mainBody );
-        add_Instruction( &gen->functionBody, "CREATEFRAME\n" );
-        add_Instruction( &gen->functionBody, "PUSHFRAME\n" );
+        add_Instruction( &gen->mainBody, "CREATEFRAME\n" );
+        if(scopeDepth == 1) {
+            addNonFunctionSymbolsFromGlobal(globalFrame, gen, scopeDepth,inFunc);
+        }
+        if(scopeDepth > 1){
+            copyVariables(gen,inFunc);
+        }
+        add_Instruction( &gen->mainBody, "PUSHFRAME\n" );
     }
 }
 
@@ -842,7 +890,7 @@ statements
 JUMP _while_[iterCount]                                 //  \
 LABEL _while_end_[iterCount]                            //   gen_WhileEnd
 */
-void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
+void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* globalFrame) {
 
     if ( scopeDepth <= 1 ) {gen->iterCount++;}
     if ( inFunc ) {
@@ -853,10 +901,16 @@ void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc ) {
 
         //eval expression somehow
     } else {
+        add_Instruction( &gen->mainBody, "CREATEFRAME\n");
+        if(scopeDepth == 1){
+            addNonFunctionSymbolsFromGlobal(globalFrame,gen,scopeDepth,inFunc);
+        }
+        add_Instruction( &gen->mainBody, "PUSHFRAME\n");
         add_Instruction( &gen->mainBody, "LABEL _while_" );
         add_Int( &gen->mainBody, gen->iterCount );
         add_Int( &gen->mainBody, scopeDepth );
         add_newLine( &gen->mainBody );
+
 
         //eval expression somehow
     }
@@ -924,35 +978,52 @@ void gen_ClearExprResult( generator_t* gen, bool inFunc ) {
 }
 
 //TODO ked je expression viac ako jedna operacia
-void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
+void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc, int scope) {
 
     if ( node == NULL ) return;
 
     char buf[255];
     switch( node->token.type ) {
         case TK_PLUS:
-            gen_Expr( gen, node->left, inFunc );
-            gen_Expr( gen, node->right, inFunc );
+            gen_Expr( gen, node->left, inFunc, scope);
+            gen_Expr( gen, node->right, inFunc, scope);
 
             //check if concatenation
             if ( node->resultType == TK_STRING ) {
                 if ( inFunc ) {
                     add_Instruction( &gen->functionBody, "POPS GF@&tmp2\nPOPS GF@&tmp1\n" );
-                    add_Instruction( &gen->functionBody, "CONCAT LF@" );
-                    add_Instruction( &gen->functionBody, gen->exprResult.data );
-                    add_Instruction( &gen->functionBody, " GF@&tmp1 GF@&tmp2\n" );
-                    // lets push the result back onto the stack if there are any more operations. Just in case
-                    add_Instruction( &gen->functionBody, "PUSHS LF@" );
-                    add_Instruction( &gen->functionBody, gen->exprResult.data );
-                    add_newLine( &gen->functionBody );
+                    if(gen->isReturn){
+                        add_Instruction( &gen->functionBody, "CONCAT LF@%retval GF@&tmp1 GF@&tmp2" );
+                        add_newLine( &gen->functionBody );
+                        //go back into the stack you!
+                        add_Instruction( &gen->functionBody, "PUSHS LF@%retval");
+                        add_newLine( &gen->functionBody );
+                    }else{
+                        add_Instruction( &gen->functionBody, "CONCAT LF@" );
+                        add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
+                        add_Instruction( &gen->functionBody, " GF@&tmp1 GF@&tmp2\n" );
+                        add_Instruction(&gen->functionBody, "PUSHS LF@");
+                        add_Instruction(&gen->functionBody, getActualVariable(gen->exprResult.data, scope, gen));
+                        add_newLine( &gen->functionBody );
+                    }
                 } else {
-                    add_Instruction( &gen->mainBody, "POPS GF@&tmp2\nPOPS GF@&tmp1\n" );
-                    add_Instruction( &gen->mainBody, "CONCAT GF@" );
-                    add_Instruction( &gen->mainBody, gen->exprResult.data );
-                    add_Instruction( &gen->mainBody, " GF@&tmp1 GF@&tmp2\n" );
-                    add_Instruction( &gen->mainBody, "PUSHS GF@" );
-                    add_Instruction( &gen->mainBody, gen->exprResult.data );
-                    add_newLine( &gen->mainBody );
+                    if(scope > 0 || gen->isWhile) {
+                        add_Instruction(&gen->mainBody, "POPS GF@&tmp2\nPOPS GF@&tmp1\n");
+                        add_Instruction(&gen->mainBody, "CONCAT LF@");
+                        add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                        add_Instruction(&gen->mainBody, " GF@&tmp1 GF@&tmp2\n");
+                        add_Instruction(&gen->mainBody, "PUSHS LF@");
+                        add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                        add_newLine(&gen->mainBody);
+                    }else{
+                        add_Instruction(&gen->mainBody, "POPS GF@&tmp2\nPOPS GF@&tmp1\n");
+                        add_Instruction(&gen->mainBody, "CONCAT GF@");
+                        add_Instruction(&gen->mainBody, gen->exprResult.data);
+                        add_Instruction(&gen->mainBody, " GF@&tmp1 GF@&tmp2\n");
+                        add_Instruction(&gen->mainBody, "PUSHS GF@");
+                        add_Instruction(&gen->mainBody, gen->exprResult.data);
+                        add_newLine(&gen->mainBody);
+                    }
                 }
                 //addition
             } else {
@@ -964,30 +1035,41 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                         //go back into the stack you!
                         add_Instruction( &gen->functionBody, "PUSHS LF@%retval\n");
                     }else{
-                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                         add_newLine( &gen->functionBody );
                         //maybe we will need you again
                         add_Instruction( &gen->functionBody, "PUSHS LF@" );
-                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                         add_newLine( &gen->functionBody );
                     }
                 } else {
-                    add_Instruction( &gen->mainBody, "ADDS\n" );
-                    add_Instruction( &gen->mainBody, "POPS GF@" );
-                    add_Instruction( &gen->mainBody, gen->exprResult.data );
-                    add_newLine( &gen->mainBody );
-                    //back on the stack you go!
-                    add_Instruction( &gen->mainBody, "PUSHS GF@" );
-                    add_Instruction( &gen->mainBody, gen->exprResult.data );
-                    add_newLine( &gen->mainBody );
+                    if(scope > 1  || gen->isWhile) {
+                        add_Instruction(&gen->mainBody, "ADDS\n");
+                        add_Instruction(&gen->mainBody, "POPS LF@");
+                        add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                        add_newLine(&gen->mainBody);
+                        //back on the stack you go!
+                        add_Instruction(&gen->mainBody, "PUSHS LF@");
+                        add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                        add_newLine(&gen->mainBody);
+                    }else{
+                        add_Instruction(&gen->mainBody, "ADDS\n");
+                        add_Instruction(&gen->mainBody, "POPS GF@");
+                        add_Instruction(&gen->mainBody, gen->exprResult.data);
+                        add_newLine(&gen->mainBody);
+                        //back on the stack you go!
+                        add_Instruction(&gen->mainBody, "PUSHS GF@");
+                        add_Instruction(&gen->mainBody, gen->exprResult.data);
+                        add_newLine(&gen->mainBody);
+                    }
                 }
             }
             // clear_Tape( &gen->exprResult );
             break;
 
         case TK_MINUS:
-            gen_Expr( gen, node->left, inFunc );
-            gen_Expr( gen, node->right, inFunc );
+            gen_Expr( gen, node->left, inFunc, scope);
+            gen_Expr( gen, node->right, inFunc, scope);
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "SUBS\n" );
@@ -996,27 +1078,37 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                     add_Instruction( &gen->functionBody, "%retval\n" );
                     add_Instruction( &gen->functionBody, "PUSHS LF@%retval\n");
                 }else{
-                    add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                     add_newLine( &gen->functionBody );
                     add_Instruction( &gen->functionBody, "PUSHS LF@" );
-                    add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                     add_newLine( &gen->functionBody );
                 }
             } else {
-                add_Instruction( &gen->mainBody, "SUBS\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@" );
-                add_Instruction( &gen->mainBody, gen->exprResult.data );
-                add_newLine( &gen->mainBody );
-                add_Instruction( &gen->mainBody, "PUSHS GF@" );
-                add_Instruction( &gen->mainBody, gen->exprResult.data );
-                add_newLine( &gen->mainBody );
+                if(scope >0 || gen->isWhile) {
+                    add_Instruction(&gen->mainBody, "SUBS\n");
+                    add_Instruction(&gen->mainBody, "POPS LF@");
+                    add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                    add_newLine(&gen->mainBody);
+                    add_Instruction(&gen->mainBody, "PUSHS LF@");
+                    add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                    add_newLine(&gen->mainBody);
+                }else{
+                    add_Instruction(&gen->mainBody, "SUBS\n");
+                    add_Instruction(&gen->mainBody, "POPS GF@");
+                    add_Instruction(&gen->mainBody, gen->exprResult.data);
+                    add_newLine(&gen->mainBody);
+                    add_Instruction(&gen->mainBody, "PUSHS GF@");
+                    add_Instruction(&gen->mainBody, gen->exprResult.data);
+                    add_newLine(&gen->mainBody);
+                }
             }
             // clear_Tape( &gen->exprResult );
             break;
 
         case TK_MUL:
-            gen_Expr( gen, node->left, inFunc );
-            gen_Expr( gen, node->right, inFunc );
+            gen_Expr( gen, node->left, inFunc, scope);
+            gen_Expr( gen, node->right, inFunc, scope);
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "MULS\n" );
@@ -1025,27 +1117,37 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                     add_Instruction( &gen->functionBody, "%retval\n" );
                     add_Instruction( &gen->functionBody, "PUSHS LF@%retval\n");
                 }else{
-                    add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                     add_newLine( &gen->functionBody );
                     add_Instruction( &gen->functionBody, "PUSHS LF@" );
-                    add_Instruction( &gen->functionBody, gen->exprResult.data );
+                    add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                     add_newLine( &gen->functionBody );
                 }
             } else {
-                add_Instruction( &gen->mainBody, "MULS\n" );
-                add_Instruction( &gen->mainBody, "POPS GF@" );
-                add_Instruction( &gen->mainBody, gen->exprResult.data );
-                add_newLine( &gen->mainBody );
-                add_Instruction( &gen->mainBody, "PUSHS GF@" );
-                add_Instruction( &gen->mainBody, gen->exprResult.data );
-                add_newLine( &gen->mainBody );
+                if(scope >0 || gen->isWhile) {
+                    add_Instruction(&gen->mainBody, "MULS\n");
+                    add_Instruction(&gen->mainBody, "POPS LF@");
+                    add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                    add_newLine(&gen->mainBody);
+                    add_Instruction(&gen->mainBody, "PUSHS LF@");
+                    add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                    add_newLine(&gen->mainBody);
+                }else{
+                    add_Instruction(&gen->mainBody, "MULS\n");
+                    add_Instruction(&gen->mainBody, "POPS GF@");
+                    add_Instruction(&gen->mainBody, gen->exprResult.data);
+                    add_newLine(&gen->mainBody);
+                    add_Instruction(&gen->mainBody, "PUSHS GF@");
+                    add_Instruction(&gen->mainBody, gen->exprResult.data);
+                    add_newLine(&gen->mainBody);
+                }
             }
             // clear_Tape( &gen->exprResult );
             break;
 
         case TK_DIV:
-            gen_Expr( gen, node->left, inFunc );
-            gen_Expr( gen, node->right, inFunc );
+            gen_Expr( gen, node->left, inFunc, scope);
+            gen_Expr( gen, node->right, inFunc, scope);
 
             if ( node->resultType== TK_INT ) {  //  aky je rozfiel medzy node->left.token.type a node->resultType??  (node->left.token.type je type tokenu co obsahuje napr priamo konstantu node->resultType je podla semantiky co bi malo byt vysledkom tej operacii
             //Operandy su double
@@ -1056,20 +1158,30 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                         add_Instruction( &gen->functionBody, "%retval\n" );
                         add_Instruction( &gen->functionBody, "PUSHS LF@%retval\n");
                     }else{
-                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                         add_newLine( &gen->functionBody );
                         add_Instruction( &gen->functionBody, "PUSHS LF@" );
-                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                         add_newLine( &gen->functionBody );
                     }
                 } else {
-                    add_Instruction( &gen->mainBody, "IDIVS\n" );
-                    add_Instruction( &gen->mainBody, "POPS GF@" );
-                    add_Instruction( &gen->mainBody, gen->exprResult.data );
-                    add_newLine( &gen->mainBody );
-                    add_Instruction( &gen->mainBody, "PUSHS GF@" );
-                    add_Instruction( &gen->mainBody, gen->exprResult.data );
-                    add_newLine( &gen->mainBody );
+                    if(scope > 0 || gen->isWhile) {
+                        add_Instruction(&gen->mainBody, "IDIVS\n");
+                        add_Instruction(&gen->mainBody, "POPS LF@");
+                        add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                        add_newLine(&gen->mainBody);
+                        add_Instruction(&gen->mainBody, "PUSHS LF@");
+                        add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                        add_newLine(&gen->mainBody);
+                    }else{
+                        add_Instruction(&gen->mainBody, "IDIVS\n");
+                        add_Instruction(&gen->mainBody, "POPS GF@");
+                        add_Instruction(&gen->mainBody, gen->exprResult.data);
+                        add_newLine(&gen->mainBody);
+                        add_Instruction(&gen->mainBody, "PUSHS GF@");
+                        add_Instruction(&gen->mainBody, gen->exprResult.data);
+                        add_newLine(&gen->mainBody);
+                    }
                 }
                 // clear_Tape( &gen->exprResult );
             } else {
@@ -1081,28 +1193,38 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
                         add_Instruction( &gen->functionBody, "%retval\n" );
                         add_Instruction( &gen->functionBody, "PUSHS LF@%retval\n");
                     }else{
-                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                         add_newLine( &gen->functionBody );
                         add_Instruction( &gen->functionBody, "PUSHS LF@" );
-                        add_Instruction( &gen->functionBody, gen->exprResult.data );
+                        add_Instruction( &gen->functionBody, getActualVariable(gen->exprResult.data,scope,gen));
                         add_newLine( &gen->functionBody );
                     }
                 } else {
-                    add_Instruction( &gen->mainBody, "DIVS\n" );
-                    add_Instruction( &gen->mainBody, "POPS GF@" );
-                    add_Instruction( &gen->mainBody, gen->exprResult.data );
-                    add_newLine( &gen->mainBody );
-                    add_Instruction( &gen->mainBody, "PUSHS GF@" );
-                    add_Instruction( &gen->mainBody, gen->exprResult.data );
-                    add_newLine( &gen->mainBody );
+                    if(scope > 0 || gen->isWhile) {
+                        add_Instruction(&gen->mainBody, "DIVS\n");
+                        add_Instruction(&gen->mainBody, "POPS LF@");
+                        add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                        add_newLine(&gen->mainBody);
+                        add_Instruction(&gen->mainBody, "PUSHS LF@");
+                        add_Instruction(&gen->mainBody, getActualVariable(gen->exprResult.data, scope, gen));
+                        add_newLine(&gen->mainBody);
+                    }else{
+                        add_Instruction(&gen->mainBody, "DIVS\n");
+                        add_Instruction(&gen->mainBody, "POPS GF@");
+                        add_Instruction(&gen->mainBody, gen->exprResult.data);
+                        add_newLine(&gen->mainBody);
+                        add_Instruction(&gen->mainBody, "PUSHS GF@");
+                        add_Instruction(&gen->mainBody, gen->exprResult.data);
+                        add_newLine(&gen->mainBody);
+                    }
                 }
                 // clear_Tape( &gen->exprResult );
             }
             break;
 
         case TK_EQ:
-            gen_Expr( gen, node->left, inFunc );
-            gen_Expr( gen, node->right, inFunc );
+            gen_Expr( gen, node->left, inFunc, scope);
+            gen_Expr( gen, node->right, inFunc, scope);
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "EQS\n" );
@@ -1114,8 +1236,8 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             break;
 
         case TK_NEQ:
-            gen_Expr( gen, node->left, inFunc );
-            gen_Expr( gen, node->right, inFunc );
+            gen_Expr( gen, node->left, inFunc, scope);
+            gen_Expr( gen, node->right, inFunc, scope);
 
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "EQS\n" );
@@ -1129,8 +1251,8 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             break;
 
         case TK_LT:
-            gen_Expr( gen, node->left, inFunc );
-            gen_Expr( gen, node->right, inFunc );
+            gen_Expr( gen, node->left, inFunc, scope);
+            gen_Expr( gen, node->right, inFunc, scope);
 
             if ( gen->isWhile ){
                 if ( inFunc ) {
@@ -1160,8 +1282,8 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             break;
 
         case TK_GT:
-            gen_Expr( gen, node->left, inFunc );
-            gen_Expr( gen, node->right, inFunc );
+            gen_Expr( gen, node->left, inFunc, scope);
+            gen_Expr( gen, node->right, inFunc, scope);
 
             if ( gen->isWhile ){
                 if ( inFunc ) {
@@ -1191,8 +1313,8 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             break;
 
         case TK_LE:
-            gen_Expr( gen, node->left, inFunc );
-            gen_Expr( gen, node->right, inFunc );
+            gen_Expr( gen, node->left, inFunc, scope);
+            gen_Expr( gen, node->right, inFunc, scope);
 
 
             if ( inFunc ) {
@@ -1213,8 +1335,8 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             break;
 
         case TK_GE:
-            gen_Expr( gen, node->left, inFunc );
-            gen_Expr( gen, node->right, inFunc );
+            gen_Expr( gen, node->left, inFunc, scope);
+            gen_Expr( gen, node->right, inFunc, scope);
 
             if ( inFunc ) {
                 if ( gen->isWhile ) {
@@ -1236,12 +1358,20 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
         case TK_IDENTIFIER:
             if ( inFunc ) {
                 add_Instruction( &gen->functionBody, "PUSHS LF@" );
-                add_Instruction( &gen->functionBody, node->token.data.String );    //PUSHS LF@name\n
+                char* found = getActualVariable(node->token.data.String,scope,gen);
+                add_Instruction( &gen->functionBody, getActualVariable(node->token.data.String,scope,gen));    //PUSHS LF@name\n
                 add_newLine( &gen->functionBody );
             } else {
-                add_Instruction( &gen->mainBody, "PUSHS GF@" );
-                add_Instruction( &gen->mainBody, node->token.data.String );    //PUSHS LF@name\n
-                add_newLine( &gen->mainBody );
+                if(scope > 1 || gen->isWhile){
+                    add_Instruction(&gen->mainBody, "PUSHS LF@");
+                    char *found = getActualVariable(node->token.data.String,scope,gen);
+                    add_Instruction(&gen->mainBody, getActualVariable(node->token.data.String,scope,gen));    //PUSHS LF@name\n
+                    add_newLine(&gen->mainBody);
+                }else {
+                    add_Instruction(&gen->mainBody, "PUSHS GF@");
+                    add_Instruction(&gen->mainBody, node->token.data.String);    //PUSHS LF@name\n
+                    add_newLine(&gen->mainBody);
+                }
             }
             break;
 
@@ -1320,8 +1450,8 @@ void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc ) {
             break;
 
         case TK_COALESCE:
-            gen_Expr( gen, node->right, inFunc );
-            gen_Expr( gen, node->left, inFunc );
+            gen_Expr( gen, node->right, inFunc, scope);
+            gen_Expr( gen, node->left, inFunc, scope);
 
             if (inFunc ) {
                 add_Instruction( &gen->functionBody, "CALL _COALESCE\n" );

@@ -82,13 +82,13 @@ void gen_AssignVal( generator_t* gen, char* varName,  char* val, bool inFunc, ch
  * @param funcName name of a function
  * @param function
 */
-void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function );
+void gen_FunctionHeader( generator_t* gen, char* funcName, Node* function ,Node* globalFrame, int scope);
 
 void gen_LiteralReturn(generator_t* gen,token_t token);
 
 void gen_AssignReturnToVariable(generator_t* gen,token_t tokenToAssign,bool inFunc);
 
-void gen_IdentifierReturn(generator_t* gen,token_t token);
+void gen_IdentifierReturn(generator_t* gen,token_t token, int scope);
 
 void gen_FunctionFooter( generator_t* gen);
 
@@ -110,7 +110,7 @@ void gen_FunctionParamNil( generator_t* gen, bool inFunc );
 
 void gen_Function( generator_t* gen );
 
-void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope);
+void addNonFunctionSymbolsFromGlobal(Node *root, generator_t* gen, int scope, bool isFunc);
 
 char* getActualVariable(char* key,int scope,generator_t* gen);
 
@@ -125,9 +125,9 @@ void gen_IfDone( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
 void gen_IfDone_End( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
-void gen_IfThenElse_End( generator_t* gen, unsigned int scopeDepth, bool inFunc );
+void gen_IfThenElse_End( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* globalFrame);
 
-void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc );
+void gen_While( generator_t* gen, unsigned int scopeDepth, bool inFunc, Node* globalFrame);
 
 void gen_WhileCond( generator_t* gen, unsigned int scopeDepth, bool inFunc );
 
@@ -139,7 +139,7 @@ void gen_SaveExprResult( generator_t* gen, char* name );
 
 void gen_ClearExprResult( generator_t* gen, bool inFunc );
 
-// void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc );
+//void gen_Expr( generator_t* gen, ASTNode* node, bool inFunc );
 
 void gen_LE( generator_t* gen );
 

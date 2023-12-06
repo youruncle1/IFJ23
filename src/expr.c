@@ -443,7 +443,7 @@ tk_type_t rule_expression(parser_t *parser, TokenArray *tokenArray, generator_t*
             result = stack->top->data.node->resultType;
             //parser_get_previous_token(parser, tokenArray);
             parser_get_previous_token(parser, tokenArray);
-            gen_Expr(gen, stack->top->data.node, parser->inFunction);
+            gen_Expr(gen, stack->top->data.node, parser->inFunction,parser->scopeDepth);
             return result;
             }
 

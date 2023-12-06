@@ -1,15 +1,11 @@
-var i : Int = 0
-
-while (i < 5)
+func foo()->String
 {
-    write("hello\n")
-    i = i + 1
+    let a = "ahoj "
+    let b = " more"
+    return a+b + "opa"
+    write("hello")
 }
 
-var a : Int = 10
+var a = foo()
+write(a)
 
-while (a > 5)
-{
-    write("foo\n")
-    a = a - 2
-}
