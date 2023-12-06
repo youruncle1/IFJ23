@@ -5,9 +5,7 @@ file: "src/scanner.c"
 Lexical analysis
 
 authors: xpolia05
-         xbencs00
-         xrusna08
-         xhonze01
+         
 */
 
 #include "scanner.h"

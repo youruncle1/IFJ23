@@ -1,13 +1,11 @@
 /*
 IFJ PROJEKT 2023/2024
-file: "src/string.c"
+file: "string.c"
 
 String helper functions
 
 authors: xpolia05
-         xbencs00
-         xrusna08
-         xhonze01
+
 */
 
 #include "string.h"

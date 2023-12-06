@@ -1,3 +1,13 @@
+/*
+IFJ PROJEKT 2023/2024
+file: "symtable.c"
+
+Symtable (BVS)
+
+authors: xpolia05
+         xhonze01
+
+*/
 #include "symtable.h"
 
 /* Funkce pro inicializaci zasobniku */
@@ -55,7 +65,7 @@ Node *insertFunc(Node *root, token_t token){
     Node *found = search(root, token.data.String);
 
     if (found != NULL){
-        handle_error(OTHER_SEMANTIC_ERROR, 0, "Function redefinition error");
+        handle_error(SEMANTIC_UNDEFINED_FUNCTION, 0, "Function redefinition error");
     }
 
     Symbol *symbol = initSymbol(token.data.String, TK_KW_NIL, false, false, true); // initialize with NIL(return type yet unknown)
@@ -204,16 +214,6 @@ Node* stackSearch(SymbolTableStack* stack, const char* key) {
 int isEmpty(SymbolTableStack* stack) {
     return (stack->top == NULL);
 }
-
-// void inOrder(struct Node* node) {
-//     if (node == NULL) {
-//         return;
-//     }
-//     inOrder(node->left);
-//     printf("%s ", node->symbol.key);
-//     inOrder(node->right);
-// }
-
 
 int height(Node *root) {
     if (root == NULL) {

@@ -1,13 +1,11 @@
 /*
 IFJ PROJEKT 2023/2024
-file: "src/scanner.h"
+file: "scanner.h"
 
-Lexical analysis - header file
+Lexical analyser - header file
 
 authors: xpolia05
-         xbencs00
-         xrusna08
-         xhonze01
+
 */
 
 #ifndef SCANNER_H
@@ -19,6 +17,10 @@ authors: xpolia05
 #include <ctype.h>
 #include <stdbool.h>
 
+/**
+ * @brief All possible states of the scanner
+ * 
+ */
 typedef enum {
     /* Start state */
     START,
@@ -57,7 +59,10 @@ typedef enum {
     COALESCE,
 } fsm_state_t;
 
-
+/**
+ * @brief Token types used throughout the program, some are used exclusively in expression parser
+ * 
+ */
 typedef enum {
 
     TK_UNWRAP,        // !  force unwraps a value, asserting that it is NOT 'nil'(see ^ and assignment: 5.1 Aritmeticke, retezcove...)
@@ -122,6 +127,15 @@ typedef enum {
     
 } tk_type_t;
 
+
+/**
+ * @brief Structure representing a token.
+ *
+ * @param data Union holding the data of the token.
+ * @param type Type of the token as defined by tk_type_t.
+ * @param line Line number where the token appears in the source code.
+ * @param eol_before Flag indicating if there was an end-of-line before this token.
+ */
 typedef struct {
     union { 
         // https://learn.microsoft.com/cs-cz/cpp/cpp/data-type-ranges?view=msvc-170
@@ -134,6 +148,14 @@ typedef struct {
     bool eol_before;
 } token_t;
 
+/**
+ * @brief Structure representing the state of a scanner.
+ *
+ * @param input Pointer to the input file.
+ * @param state Current state of the finite state machine (FSM).
+ * @param line Current line number being processed.
+ * @param buffer Buffer used for storing temporary data.
+ */
 typedef struct {
     FILE *input;
     fsm_state_t state;
@@ -141,6 +163,13 @@ typedef struct {
     buffer_t buffer;
 } scanner_t;
 
+/**
+ * @brief Checks if token is a keyword or identifier
+ *
+ * @param identifier Found identifier in scanner.
+ * @param line Line number where the identifier appears so new token can be created with this line.
+ * @return A token representing the identifier/keyword.
+ */
 token_t get_identifier(char *identifier, unsigned int line);
 token_t create_token(tk_type_t type, unsigned int line, bool eol_before);
 token_t get_token(scanner_t *scanner);
