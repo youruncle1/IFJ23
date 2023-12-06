@@ -28,7 +28,7 @@ typedef enum {
 } ErrorCode;
 
 /**
- * @brief exits the pr
+ * @brief exits the program with given error code, printing line and message
  * 
  * @param error_code 
  * @param line 

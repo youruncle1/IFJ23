@@ -14,13 +14,6 @@ authors: xpolia05
 #include <string.h>
 #include <stdbool.h>
 
-/*  
-        TODO 
-
-    1. watch out for memleaks when error exiting in string literals
-    2. comment the code (?doxygen?)
-
-*/
 
 token_t get_identifier(char *identifier, unsigned int line) {
     if (strcmp(identifier, "Double") == 0)

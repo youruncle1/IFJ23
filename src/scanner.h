@@ -171,7 +171,23 @@ typedef struct {
  * @return A token representing the identifier/keyword.
  */
 token_t get_identifier(char *identifier, unsigned int line);
+
+/**
+ * @brief Creates a generic token.
+ *
+ * @param type Type of the token as defined by tk_type_t.
+ * @param line Line number where the token appears.
+ * @param eol_before Flag indicating if there was an end-of-line before this token.
+ * @return A newly created token.
+ */
 token_t create_token(tk_type_t type, unsigned int line, bool eol_before);
+
+/**
+ * @brief Retrieves the next token from the scanner.
+ *
+ * @param scanner Pointer to the scanner structure.
+ * @return The next token extracted by the scanner.
+ */
 token_t get_token(scanner_t *scanner);
 
 #endif
