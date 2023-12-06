@@ -1,11 +1,9 @@
-func foo()->String
+func foo(_ x:String,_ y:String)->String
 {
-    let a = "ahoj "
-    let b = " more"
-    return a+b + "opa"
-    write("hello")
+    write(x)
+    return x+y
 }
 
-var a = foo()
+var a = foo("ahoj"," neger")
 write(a)
 

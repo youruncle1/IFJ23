@@ -277,9 +277,9 @@ void gen_FunctionParam( generator_t* gen, char* param, bool inFunc, int paramCou
     } else {
         if ( gen->isWrite == 0) {
             if(scope != 0) {
-                add_Instruction(&gen->mainBody, "WRITE LF@");
+                add_Instruction(&gen->mainBody, "WRITE GF@");
                 char *found = getActualVariable(param,scope,gen);
-                add_Instruction(&gen->mainBody, getActualVariable(param,scope,gen));
+                add_Instruction(&gen->mainBody, param);
                 add_newLine(&gen->mainBody);
             }else{
                 add_Instruction(&gen->mainBody, "WRITE GF@");

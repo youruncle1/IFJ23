@@ -241,21 +241,13 @@ void parseFunctionDefinition(parser_t *parser, TokenArray *tokenArray, generator
 
     }
     parser_get_next_token(parser, tokenArray);
-    bool footerGenerated = false;
     while(parser->current_token.type != TK_RBRACE) {
-        if(footerGenerated){
-            gen_FunctionFooter(gen);
-        }
-        if(parser->current_token.type == TK_KW_RETURN ){
-            footerGenerated = true;
-        }
         parseBlockContent(parser, tokenArray, gen);
         parser_get_next_token(parser,tokenArray);
     }
     // CHECK CI EXISTOVAL RETURN KED SA PRESLO TELO FUNCKIE
-    if(!footerGenerated) {
-        gen_FunctionFooter(gen);
-    }
+
+    gen_FunctionFooter(gen);
     parser->inFunction = false;
     parser->hasReturn = false;
     parser->scopeDepth--;                                             // scopeDepth should be 0 after this!!!
@@ -785,7 +777,7 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
                 if (!node) {
                     handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable");
                 }
-                gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount + 1,parser->scopeDepth);
+                gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount,parser->scopeDepth + 1);
             }
 
         }
@@ -816,7 +808,7 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
                     if (!node) {
                         handle_error(SEMANTIC_UNDEFINED_VARIABLE, parser->current_token.line, "Usage of undefined variable");
                     }
-                    gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount + 1,parser->scopeDepth);
+                    gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount,parser->scopeDepth + 1);
                 }
             }
 
@@ -859,7 +851,7 @@ void parseFunctionCall(parser_t *parser, TokenArray *tokenArray, generator_t* ge
                 if (functionNode->symbol.parameters[i].type != node->symbol.type){
                     handle_error(SEMANTIC_FUNCTION_ARGUMENTS, parser->current_token.line, "Wrong name in function call");
                 }
-                gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount + 1,parser->scopeDepth);
+                gen_FunctionParam( gen,parsedParameters[i].id, parser->inFunction,parsedParamCount,parser->scopeDepth + 1);
 
             }
             if (parsedParameters[i].type != TK_KW_NIL) {
@@ -956,22 +948,22 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
                 // Store next identifier under symbol.id
                 (*parsedParameters)[parsedParamCount].id = strdup(parser->current_token.data.String);
                 parser_get_next_token(parser,tokenArray);
-                gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1, parser->scopeDepth);
+                gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount, parser->scopeDepth + 1);
             } else if (is_token_literal(parser->current_token.type)) {
                 // Convert literal and store under type
                 (*parsedParameters)[parsedParamCount].type = convert_literal_to_datatype(parser->current_token.type);
                 switch( (*parsedParameters)[parsedParamCount].type ) {
                     case TK_KW_INT:
                     case TK_KW_INT_OPT:
-                        gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction, parsedParamCount + 1 );
+                        gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction, parsedParamCount + 1);
                         break;
                     case TK_KW_DOUBLE:
                     case TK_KW_DOUBLE_OPT:
-                        gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction, parsedParamCount + 1 );
+                        gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction, parsedParamCount + 1);
                         break;
                     case TK_KW_STRING:
                     case TK_KW_STRING_OPT:
-                        gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction, parsedParamCount + 1 );
+                        gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction, parsedParamCount + 1);
                         break;
                     case TK_KW_NIL:
                         gen_FunctionParamNil( gen, parser->inFunction );
@@ -986,7 +978,6 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
             // Store identifier under symbol.id
 
             (*parsedParameters)[parsedParamCount].id = strdup(parser->current_token.data.String);
-            //gen_FunctionParam( gen, (*parsedParameters)[parsedParamCount].id, parser->inFunction,parsedParamCount + 1,parser->scopeDepth);
             parser_get_next_token(parser, tokenArray);
         } else {
             handle_error(SYNTAX_ERROR, parser->current_token.line, "Expected ':', ',' or ')' after identifier");
@@ -1010,18 +1001,16 @@ void parseCallParameter(parser_t *parser, TokenArray *tokenArray, Parameter **pa
         switch( (*parsedParameters)[parsedParamCount].type ) {
             case TK_KW_INT:
             case TK_KW_INT_OPT:
-                gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction, parsedParamCount + 1 );
+                gen_FunctionParamInt( gen, parser->current_token.data.Int, parser->inFunction, parsedParamCount + 1);
                 break;
             case TK_KW_DOUBLE:
             case TK_KW_DOUBLE_OPT:
-                gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction, parsedParamCount + 1 );
+                gen_FunctionParamDouble( gen, parser->current_token.data.Double, parser->inFunction, parsedParamCount + 1);
                 break;
             case TK_KW_STRING:
             case TK_KW_STRING_OPT:
-                gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction, parsedParamCount + 1 );
+                gen_FunctionParamString( gen, parser->current_token.data.String, parser->inFunction, parsedParamCount + 1);
                 break;
-            case TK_KW_NIL:
-                gen_FunctionParamNil( gen, parser->inFunction );
             default:
                 break;
 
